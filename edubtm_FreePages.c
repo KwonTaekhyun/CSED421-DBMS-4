@@ -81,7 +81,41 @@ Four edubtm_FreePages(
     btm_LeafEntry       *lEntry;        /* a leaf entry */
     DeallocListElem     *dlElem;        /* an element of dealloc list */
 
+    //B+ tree 색인 page를 deallocate 함
 
+    //1) 파라미터로 주어진 page의 모든 자식 page들에 대해 재귀적으로 edubtm_FreePages()를 호출하여 해당 page들을 deallocate 함
+    BfM_GetNewTrain(curPid, (char**)&apage, PAGE_BUF);
+
+    if (apage->any.hdr.type & INTERNAL){
+        BtreeInternal* curr = &(apage->bi);
+        MAKE_PAGEID(tPid, curPid->volNo, curr->hdr.p0);
+        e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
+        if(e) ERRB1(e, curPid, PAGE_BUF);
+
+        for (i = 0; i < curr->hdr.nSlots; i++) {
+            iEntryOffset = apage->bi.slot[-i];
+            iEntry = (btm_InternalEntry*)&(curr->data[iEntryOffset]);
+
+            MAKE_PAGEID(tPid, curPid->volNo, iEntry->spid);
+            e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
+            if (e) ERRB1(e, curPid, PAGE_BUF);
+        }
+    }
+    //2) 파라미터로 주어진 page를 deallocate 함
+    //2-1) Page header의 type에서 해당 page가 deallocate 될 page임을 나타내는 bit를 set 및 나머지 bit들을 unset 함
+    apage->any.hdr.type = FREEPAGE;
+    //2-2) 해당 page를 deallocate 함
+    e = Util_getElementFromPool(dlPool, &dlElem);
+    if(e) ERR(e);
+    dlElem->type = DL_PAGE;
+    dlElem->elem.pid = *curPid;
+    dlElem->next = dlHead->next;
+    dlHead->next = dlElem;
+
+    e = BfM_SetDirty(curPid, PAGE_BUF);
+    if(e) ERRB1(e, curPid, PAGE_BUF);
+    e = BfM_FreeTrain(curPid, PAGE_BUF);
+    if(e) ERR(e);
     
     return(eNOERROR);
     

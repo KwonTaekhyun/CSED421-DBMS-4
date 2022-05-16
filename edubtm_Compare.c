@@ -73,6 +73,7 @@ Four edubtm_KeyCompare(
     register unsigned char      *right;         /* right key value */
     Two                         i;              /* index for # of key parts */
     Two                         j;              /* temporary variable */
+    Two                         k;
     Two                         kpartSize;      /* size of the current kpart */
     Two                         len1, len2;	/* string length */
     Two_Invariable              s1, s2;         /* 2-byte short values */
@@ -92,6 +93,46 @@ Four edubtm_KeyCompare(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // 파라미터로 주어진 두 key 값의 대소를 비교하고, 비교 결과를 반환함. Variable length string의 경우 사전식 순서를 이용하여 비교함
+
+    // 1) 두 key 값이 같은 경우, EQUAL을 반환함
+    // 2) 첫 번째 key 값이 큰 경우, GREATER를 반환함
+    // 3) 첫 번째 key 값이 작은 경우, LESS를 반환함
+    left = key1->val;
+	right = key2->val;
+
+    for(i = 0, j = 0, k = 0; i < kdesc->nparts; i++) {
+        switch(kdesc->kpart[i].type) {
+        case SM_INT:
+            kpartSize = kdesc->kpart[i].length;
+			memcpy(&i1, &left[j], kpartSize);
+			memcpy(&i2, &right[k], kpartSize);
+
+            if(i1 < i2) return LESS;
+            else if(i1 > i2) return GREAT;
+
+            j += kpartSize;
+			k += kpartSize;
+
+            break;
+
+        case SM_VARSTRING:
+            memcpy(&len1, &left[j], sizeof(Two));
+	        memcpy(&len2, &right[k], sizeof(Two));
+
+            if (strcmp(&left[j+sizeof(Two)], &right[j+sizeof(Two)]) > 0)
+				return (GREAT);
+			else if (strcmp(&left[j+sizeof(Two)], &right[j+sizeof(Two)]) < 0)
+				return (LESS);
+			
+			j += len1 + sizeof(Two);
+			k += len2 + sizeof(Two);
+			
+            break;
+        default:
+            break;
+        }
+    }
         
     return(EQUAL);
     

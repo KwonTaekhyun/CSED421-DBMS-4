@@ -158,7 +158,81 @@ Four edubtm_SplitLeaf(
     Boolean                     flag;
     Boolean                     isTmp;
  
-    
+    // Overflow가 발생한 leaf page를 split 하여 파라미터로 주어진 index entry를 삽입하고, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+    // 1) 새로운 page를 할당 받음
+    btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
+    // 2) 할당 받은 page를 leaf page로 초기화함
+    edubtm_InitLeaf(&newPid, FALSE, isTmp);
+    // 3) 기존 index entry들 및 삽입할 index entry를 key 순으로 정렬하여 overflow가 발생한 page 및 할당 받은 page에 나누어 저장함
+    BfM_GetNewTrain(&newPid, (char**)&npage, PAGE_BUF);
+    // 먼저, overflow가 발생한 page에 데이터 영역을 50% 이상 채우는 수의 index entry들을 저장하고 header 갱신
+    sum = 0;
+    maxLoop = fpage->hdr.nSlots;
+    for (i = 0; i < maxLoop && sum < BL_HALF; i++) {
+        fEntryOffset = fpage->slot[-i];
+        fEntry = (btm_LeafEntry*)&(fpage->data[fEntryOffset]);
+        alignedKlen = ALIGNED_LENGTH(fEntry->klen);
+        sum += sizeof(Two) + sizeof(Two) + alignedKlen + fEntry->nObjects * OBJECTID_SIZE;
+
+        if (i == high) {
+            alignedKlen = ALIGNED_LENGTH(fEntry->klen);
+            entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + OBJECTID_SIZE;
+            sum += entryLen;
+        }
+    }
+    fpage->hdr.nSlots = i;
+    // 나머지 index entry들을 할당 받은 page에 저장하고 header 갱신
+    flag = FALSE;
+    nEntryOffset = 0;
+    for (j = 0; i < maxLoop; i++, j++) {
+        npage->slot[-j] = nEntryOffset;
+        fEntry = (btm_LeafEntry*)&fpage->data[fpage->slot[-i]];
+        alignedKlen = ALIGNED_LENGTH(fEntry->klen);
+        entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + fEntry->nObjects * OBJECTID_SIZE;
+        memcpy(&npage->data[nEntryOffset], fEntry, entryLen);
+        nEntryOffset += entryLen;
+        npage->hdr.nSlots++;
+        fpage->hdr.unused += entryLen;
+
+        if (i == high) {
+            j++;
+            npage->slot[-j] = nEntryOffset;
+            alignedKlen = ALIGNED_LENGTH(item->klen);
+            entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + OBJECTID_SIZE;
+            memcpy(&npage->data[nEntryOffset], &item->nObjects, entryLen - OBJECTID_SIZE);
+            nEntryOffset += entryLen - OBJECTID_SIZE;
+            memcpy(&npage->data[nEntryOffset], &item->oid, OBJECTID_SIZE);
+            nEntryOffset += OBJECTID_SIZE;
+            npage->hdr.nSlots++;
+            flag = TRUE;
+        }
+    }
+    npage->hdr.free = nEntryOffset;
+    edubtm_CompactLeafPage(fpage, flag ? NIL : high);
+    if (!flag) {
+        for (k = fpage->hdr.nSlots; k > high + 1; k--)
+            fpage->slot[-k] = fpage->slot[-k+1];
+        fpage->slot[-k] = fpage->hdr.free;
+        alignedKlen = ALIGNED_LENGTH(item->klen);
+        entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + OBJECTID_SIZE;
+        fEntryOffset = fpage->hdr.free;
+        memcpy(&fpage->data[fEntryOffset], &item->nObjects, entryLen - OBJECTID_SIZE);
+        fEntryOffset += entryLen - OBJECTID_SIZE;
+        memcpy(&fpage->data[fEntryOffset], &item->oid, OBJECTID_SIZE);
+        fpage->hdr.free += entryLen;
+        fpage->hdr.nSlots++;
+    }
+    // 4) 할당 받은 page를 leaf page들간의 doubly linked list에 추가함
+    npage->hdr.nextPage = fpage->hdr.nextPage;
+    npage->hdr.prevPage = fpage->hdr.pid.pageNo;
+    fpage->hdr.nextPage = newPid.pageNo;
+    // 5) 할당 받은 page를 가리키는 internal index entry를 생성함
+    // 6) Split된 page가 ROOT일 경우, type을 LEAF로 변경함
+    // 7) 생성된 index entry를 반환함
+    BfM_SetDirty(&newPid, PAGE_BUF);
+    BfM_SetDirty(&fpage->hdr.pid, PAGE_BUF);
+    BfM_FreeTrain(&newPid, PAGE_BUF);
 
     return(eNOERROR);
     

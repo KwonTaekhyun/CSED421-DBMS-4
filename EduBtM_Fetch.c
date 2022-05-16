@@ -92,8 +92,24 @@ Four EduBtM_Fetch(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-    
 
+    // B+ tree 색인에서 검색 조건을 만족하는 첫 번째 object를 검색하고, 검색된 object를 가리키는 cursor를 반환함
+
+    if (startCompOp == SM_BOF){
+        // 1) 파라미터로 주어진 startCompOp가 SM_BOF일 경우, B+ tree 색인의 첫 번째 object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함
+        e = edubtm_FirstObject(root, kdesc, stopKval, stopCompOp, cursor);
+    }
+    else if(startCompOp == SM_EOF){
+        // 2) 파라미터로 주어진 startCompOp가 SM_EOF일 경우, B+ tree 색인의 마지막 object (가장 큰 key 값을 갖는 leaf index entry) 를 검색함
+        e = edubtm_LastObject(root, kdesc, stopKval, stopCompOp, cursor);
+    }
+    else{
+        // 3) 이외의 경우, edubtm_Fetch()를 호출하여 B+ tree 색인에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색함
+        e = edubtm_Fetch(root, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+    }
+
+    // 4) 검색된 leaf index entry를 가리키는 cursor를 반환함
+    if (e<0) ERR(e);
     return(eNOERROR);
 
 } /* EduBtM_Fetch() */
@@ -148,7 +164,7 @@ Four edubtm_Fetch(
     btm_InternalEntry   *iEntry;        /* an internal entry */
     Two                 lEntryOffset;   /* starting offset of a leaf entry */
     btm_LeafEntry       *lEntry;        /* a leaf entry */
-
+    Boolean             temp;
 
     /* Error check whether using not supported functionality by EduBtM */
     int i;
@@ -158,6 +174,143 @@ Four edubtm_Fetch(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // 파라미터로 주어진 page를 root page로 하는 B+ tree 색인에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색하고, 검색된 leaf index entry를 가리키는 cursor를 반환함. 
+    // (첫 번째 object는, 검색 조건을 만족하는 object들 중 검색 시작 key 값과 가장 가까운 key 값을 가지는 object를 의미함)
+
+    e = BfM_GetTrain(root, &apage, PAGE_BUF);
+	if (e!=eNOERROR) ERR(e);
+
+	if (apage->any.hdr.type & INTERNAL) 
+	{
+        // 1) 파라미터로 주어진 root page가 internal page인 경우,
+        // 1-1) 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf page를 찾기 위해 다음으로 방문할 자식 page를 결정함
+        // 1-2) 결정된 자식 page를 root page로 하는 B+ subtree에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색하기 위해 재귀적으로 edubtm_Fetch()를 호출함
+        // 1-3) 검색된 leaf index entry를 가리키는 cursor를 반환함
+		edubtm_BinarySearchInternal(&apage->bi, kdesc, startKval, &idx);
+
+		if (idx < 0) {
+            MAKE_PAGEID(child, root->volNo, apage->bi.hdr.p0);
+		}
+		else{
+			iEntry = &(apage->bi.data[apage->bi.slot[-idx]]);
+			MAKE_PAGEID(child, root->volNo, iEntry->spid);
+        }
+				
+        e = edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+        if(e) ERRB1(e, root, PAGE_BUF);
+        e = BfM_FreeTrain(root, PAGE_BUF);
+        if(e) ERR(e);
+	}
+	else if (apage->any.hdr.type & LEAF)
+	{
+        // 2) 파라미터로 주어진 root page가 leaf page인 경우,
+        // 2-1) 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 index entry를 검색함
+        // (검색 종료 연산자가 SM_LT, SM_LE, SM_GT, SM_GE, SM_EQ 중 하나일 때에만, 검색 시작 조건을 이용해 찾은 key 값과 검색 종료 조건을 비교하여 검색함)
+        // 2-2) 검색된 index entry를 가리키는 cursor를 반환함
+        leafPid = root;
+		cursor->flag = CURSOR_ON;
+	
+		found = edubtm_BinarySearchLeaf(&apage->bl, kdesc, startKval, &slotNo);
+		idx = slotNo;
+
+        temp = FALSE;
+		
+        if (found == TRUE)
+		{
+			if (startCompOp == SM_EQ) {
+                idx = slotNo;
+            }
+            else if (startCompOp == SM_LT) {   
+                idx = slotNo-1;
+            }
+			else if (startCompOp == SM_LE) {
+                idx = slotNo;
+            }
+			else if (startCompOp == SM_GT) {
+                idx = slotNo+1;
+            }
+			else if (startCompOp == SM_GE) {
+                idx = slotNo;
+            }
+		}
+		else
+		{
+			if (startCompOp == SM_EQ) {
+                cursor->flag = CURSOR_EOS;
+            }
+			else if (startCompOp == SM_LT) {
+                idx = slotNo;
+            }
+			else if (startCompOp == SM_LE) {
+                idx = slotNo;
+            }
+			else if (startCompOp == SM_GT) {
+                idx = slotNo+1;
+            }
+			else if (startCompOp == SM_GE) {
+                idx = slotNo+1;
+            }
+		}
+
+		if (cursor->flag == CURSOR_EOS);
+		else if (idx < 0)
+		{
+			if (apage->bl.hdr.prevPage != NIL)
+			{
+                MAKE_PAGEID(prevPid, root->volNo, apage->bl.hdr.prevPage);
+                leafPid = &prevPid;
+
+                temp = TRUE;
+			}
+			else
+				cursor->flag = CURSOR_EOS;
+			
+		}
+		else if (idx >= apage->bl.hdr.nSlots)
+		{
+			if (apage->bl.hdr.nextPage != NIL)
+			{
+				MAKE_PAGEID(nextPid, root->volNo, apage->bl.hdr.nextPage);
+				leafPid = &nextPid;
+				idx = 0;
+			}
+			else
+				cursor->flag = CURSOR_EOS;
+		}
+
+		e = BfM_FreeTrain(root, PAGE_BUF);
+		if (e!=eNOERROR) ERR(e);
+		
+        e = BfM_GetTrain(leafPid, &apage, PAGE_BUF);
+		if (e!=eNOERROR) ERR(e);
+
+		if (cursor->flag != CURSOR_EOS)
+		{
+            if(temp){
+                idx = apage->bl.hdr.nSlots-1;
+            }    
+
+            lEntryOffset = apage->bl.slot[-idx];
+            lEntry = &(apage->bl.data[lEntryOffset]);
+			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+
+			memcpy(&cursor->oid, &lEntry->kval + alignedKlen, sizeof(ObjectID));
+			memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
+
+			cursor->leaf = *leafPid;
+			cursor->slotNo = idx;
+
+            cmp = edubtm_KeyCompare(kdesc, &cursor->key, stopKval);
+            if ((stopCompOp == SM_LT && !(cmp == LESS)) 
+                || (stopCompOp == SM_LE && !(cmp == LESS || cmp == EQUAL)) 
+                || (stopCompOp == SM_GT && !(cmp == GREATER)) 
+                || (stopCompOp == SM_GE && !(cmp == GREATER || cmp == EQUAL)))
+                cursor->flag = CURSOR_EOS;
+        }	
+
+		e = BfM_FreeTrain(leafPid, PAGE_BUF);
+		if (e!=eNOERROR) ERR(e);
+	}
 
     return(eNOERROR);
     

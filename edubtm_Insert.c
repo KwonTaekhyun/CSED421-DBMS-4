@@ -117,6 +117,42 @@ Four edubtm_Insert(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // 파라미터로 주어진 page를 root page로 하는 B+ tree 색인에 새로운 object에 대한 <object의 key, object ID> pair를 삽입하고, root page에서 split이 발생한 경우, split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+
+    BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
+    if (apage->any.hdr.type & INTERNAL) {
+        // 1) 파라미터로 주어진 root page가 internal page인 경우
+        // 1-1) 새로운 <object의 key, object ID> pair를 삽입할 leaf page를 찾기 위해 다음으로 방문할 자식 page를 결정함
+        edubtm_BinarySearchInternal(apage, kdesc, kval, &idx);
+        // 1-2) 결정된 자식 page를 root page로 하는 B+ subtree에 새로운 <object의 key, object ID> pair를 삽입하기 위해 재귀적으로 edubtm_Insert()를 호출함
+        iEntryOffset = apage->bi.slot[-idx];
+        iEntry = (btm_InternalEntry*) &apage->bi.data[iEntryOffset];
+        if(idx >= 0){
+            MAKE_PAGEID(newPid, root->volNo, iEntry->spid);
+        }
+        else{
+            MAKE_PAGEID(newPid, root->volNo, apage->bi.hdr.p0);
+        }
+        
+        edubtm_Insert(catObjForFile, &newPid, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
+        // 1-3) 결정된 자식 page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 파라미터로 주어진 root page에 삽입함
+        // 1-4) 파라미터로 주어진 root page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+        if (lh) {
+            tKey.len= litem.klen;
+            memcpy(tKey.val, litem.kval, tKey.len);
+            edubtm_BinarySearchInternal(&(apage->bi), kdesc, &tKey, &idx);
+            edubtm_InsertInternal(catObjForFile, &(apage->bi), &litem, idx, h, item);
+        }
+    }
+    else if (apage->any.hdr.type & LEAF) {
+        // 2) 파라미터로 주어진 root page가 leaf page인 경우
+        // 2-1) edubtm_InsertLeaf()를 호출하여 해당 page에 새로운 <object의 key, object ID> pair를 삽입함
+        // 2-2) Split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+        edubtm_InsertLeaf(catObjForFile, root, &(apage->bl), kdesc, kval, oid, f, h, item);
+    }
+
+    BfM_SetDirty(root, PAGE_BUF);
+    BfM_FreeTrain(root, PAGE_BUF);
     
     return(eNOERROR);
     
@@ -187,6 +223,49 @@ Four edubtm_InsertLeaf(
     /*@ Initially the flags are FALSE */
     *h = *f = FALSE;
     
+    // Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+    // 1) 새로운 index entry의 삽입 위치 (slot 번호) 를 결정함
+    found = edubtm_BinarySearchLeaf(page, kdesc, kval, &idx);
+    if (found)  ERR(eDUPLICATEDKEY_BTM);
+    // 2) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
+    alignedKlen = ALIGNED_LENGTH(kval->len);
+    entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + OBJECTID_SIZE;
+    if (BL_FREE(page) >= entryLen + sizeof(Two)) {
+        // 3) Page에 여유 영역이 있는 경우,
+        // 3-1) 필요시 page를 compact 함
+        if (BL_CFREE(page) < entryLen + sizeof(Two)){
+            edubtm_CompactLeafPage(page, NIL);
+        }
+        // 3-2) 결정된 slot 번호로 새로운 index entry를 삽입함
+        leaf.oid = *oid;
+        leaf.nObjects = 1;
+        leaf.klen = kval->len;
+
+        for(i = page->hdr.nSlots; i > (idx+1); i--)
+            page->slot[-i] = page->slot[-i+1];
+
+        entryOffset = page->slot[-(idx + 1)] = page->hdr.free;
+        entry = (btm_LeafEntry*)&(page->data[entryOffset]);
+        memcpy(entry, &leaf.nObjects, entryLen - OBJECTID_SIZE);
+        memcpy(&entry->kval[alignedKlen], &leaf.oid, OBJECTID_SIZE);
+
+        page->hdr.free += entryLen;
+        page->hdr.nSlots++;
+    }
+    else{
+        // 4) Page에 여유 영역이 없는 경우 (page overflow),
+        // 4-1) edubtm_SplitLeaf()를 호출하여 page를 split 함
+        // 4-2) Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+        leaf.oid = *oid;
+        leaf.nObjects = 1;
+        leaf.klen = kval->len;
+        memcpy(leaf.kval, kval->val, leaf.klen);
+
+        edubtm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
+
+        *h = TRUE;
+    }
 
 
     return(eNOERROR);
@@ -237,6 +316,34 @@ Four edubtm_InsertInternal(
     /*@ Initially the flag are FALSE */
     *h = FALSE;
     
+    // Internal page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
+
+    // 1) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
+    entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(item->klen + sizeof(Two));
+    if (BI_FREE(page) >= entryLen + sizeof(Two)) {
+        // 2) Page에 여유 영역이 있는 경우,
+        // 2-1) 필요시 page를 compact 함
+        if (BI_CFREE(page) < entryLen + sizeof(Two)) edubtm_CompactInternalPage(page, NIL);
+
+        // 2-2) 파라미터로 주어진 slot 번호의 다음 slot 번호로 새로운 index entry를 삽입함
+        for(i=page->hdr.nSlots; i>(high+1); i--)
+            page->slot[-i] = page->slot[-i+1];
+
+        entryOffset = page->slot[-(high + 1)] = page->hdr.free;
+        entry = (btm_InternalEntry*)(&page->data[entryOffset]);
+        memcpy(entry, item, entryLen);
+
+        page->hdr.free += entryLen;
+        page->hdr.nSlots++;
+    }
+    else {
+        // 3) Page에 여유 영역이 없는 경우 (page overflow),
+        // 3-1) edubtm_SplitInternal()을 호출하여 page를 split 함
+        // 3-2) Split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
+        edubtm_SplitInternal(catObjForFile, page, high, item, ritem);
+
+        *h = TRUE;
+    }
     
 
     return(eNOERROR);

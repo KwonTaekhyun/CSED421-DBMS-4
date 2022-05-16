@@ -1,0 +1,354 @@
+make all --print-data-base --no-builtin-variables --no-builtin-rules --question
+make: *** No rule to make target 'EduBtM_Test.o', needed by 'EduBtM_Test'.  Stop.
+
+# GNU Make 4.2.1
+# Built for x86_64-pc-linux-gnu
+# Copyright (C) 1988-2016 Free Software Foundation, Inc.
+# License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
+# Make data base, printed on Sun May 15 22:16:49 2022
+
+# Variables
+
+# automatic
+<D = $(patsubst %/,%,$(dir $<))
+# automatic
+?F = $(notdir $?)
+# default
+.SHELLFLAGS := -c
+# environment
+VSCODE_AGENT_FOLDER = /root/.vscode-server
+# environment
+VSCODE_LOG_NATIVE = false
+# makefile (from 'Makefile', line 23)
+INTERFACE = EduBtM_CreateIndex.o EduBtM_DeleteObject.o EduBtM_DropIndex.o EduBtM_Fetch.o EduBtM_FetchNext.o EduBtM_InsertObject.o
+# automatic
+?D = $(patsubst %/,%,$(dir $?))
+# automatic
+@D = $(patsubst %/,%,$(dir $@))
+# automatic
+@F = $(notdir $@)
+# makefile
+CURDIR := /DBMS/DBMS-4
+# makefile
+SHELL = /bin/sh
+# makefile (from 'Makefile', line 7)
+RM = /bin/rm
+# environment
+VSCODE_NLS_CONFIG = {"locale":"ko","availableLanguages":{"*":"ko"},"_languagePackId":"7f2b75a751ab1839cc7719cedd31e8cc.ko","_translationsConfigFile":"/root/.vscode-server/data/clp/7f2b75a751ab1839cc7719cedd31e8cc.ko/tcf.json","_cacheRoot":"/root/.vscode-server/data/clp/7f2b75a751ab1839cc7719cedd31e8cc.ko","_resolvedLanguagePackCoreLocation":"/root/.vscode-server/data/clp/7f2b75a751ab1839cc7719cedd31e8cc.ko/dfd34e8260c270da74b5c2d86d61aee4b6d56977","_corruptedFile":"/root/.vscode-server/data/clp/7f2b75a751ab1839cc7719cedd31e8cc.ko/corrupted.info","_languagePackSupport":true}
+# environment
+_ = /usr/bin/cat
+# makefile (from 'Makefile', line 17)
+CFLAGS = -w -g -fsigned-char -fPIC -I$(INCLUDE)
+# makefile (from 'Makefile', line 1)
+MAKEFILE_LIST :=  Makefile
+# 'override' directive
+GNUMAKEFLAGS := 
+# environment
+VSCODE_VERBOSE_LOGGING = true
+# environment
+VSCODE_CWD = /root/.vscode-server/bin/dfd34e8260c270da74b5c2d86d61aee4b6d56977
+# default
+MAKE_HOST := x86_64-pc-linux-gnu
+# environment
+PATH = /root/.vscode-server/bin/dfd34e8260c270da74b5c2d86d61aee4b6d56977/bin/remote-cli:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# makefile (from 'Makefile', line 31)
+TESTMODULE = EduBtM_Test.o EduBtM_TestModule.o
+# environment
+VSCODE_LOG_STACK = false
+# environment
+VSCODE_IPC_HOOK_CLI = /tmp/vscode-ipc-b823e269-0fc2-452b-a648-669fd53bbf40.sock
+# makefile (from 'Makefile', line 15)
+LIB = -lm
+# default
+.FEATURES := target-specific order-only second-expansion else-if shortest-stem undefine oneshell archives jobserver output-sync check-symlink load
+# environment
+SSH_AUTH_SOCK = /tmp/vscode-ssh-auth-ed1c734fe55f9c35c27c985f49d69d21545d2b38.sock
+# automatic
+%F = $(notdir $%)
+# environment
+VSCODE_PIPE_LOGGING = true
+# environment
+PWD = /DBMS/DBMS-4
+# default
+.LOADED := 
+# environment
+VSCODE_AMD_ENTRYPOINT = vs/workbench/api/node/extensionHostProcess
+# environment
+HOME = /root
+# environment
+REMOTE_CONTAINERS = true
+# makefile (from 'Makefile', line 26)
+NONINTERFACE = edubtm_BinarySearch.o edubtm_Compact.o edubtm_Compare.o edubtm_Delete.o edubtm_FirstObject.o edubtm_FreePages.o edubtm_InitPage.o edubtm_Insert.o edubtm_LastObject.o edubtm_Split.o edubtm_root.o
+# environment
+LOGNAME = root
+# environment
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL = 1
+# automatic
++F = $(notdir $+)
+# environment
+VSCODE_HANDLES_UNCAUGHT_ERRORS = true
+# automatic
+^D = $(patsubst %/,%,$(dir $^))
+# environment
+HOSTNAME = bd4d44e29641
+# environment
+MAKELEVEL := 0
+# default
+MAKE = $(MAKE_COMMAND)
+# default
+MAKECMDGOALS := all
+# environment
+SHLVL = 1
+# makefile (from 'Makefile', line 10)
+CC = gcc
+# makefile (from 'Makefile', line 20)
+EXEC = EduBtM_Test
+# default
+MAKE_VERSION := 4.2.1
+# makefile
+.DEFAULT_GOAL := all
+# makefile (from 'Makefile', line 13)
+INCLUDE = ./Header
+# automatic
+%D = $(patsubst %/,%,$(dir $%))
+# environment
+REMOTE_CONTAINERS_IPC = /tmp/vscode-remote-containers-ipc-ed1c734fe55f9c35c27c985f49d69d21545d2b38.sock
+# default
+MAKE_COMMAND := make
+# environment
+OLDPWD = /root/.vscode-server/bin/dfd34e8260c270da74b5c2d86d61aee4b6d56977
+# default
+.VARIABLES := 
+# automatic
+*F = $(notdir $*)
+# makefile
+MAKEFLAGS = pqrR
+# environment
+MFLAGS = -pqrR
+# automatic
+*D = $(patsubst %/,%,$(dir $*))
+# automatic
++D = $(patsubst %/,%,$(dir $+))
+# environment
+BROWSER = /root/.vscode-server/bin/dfd34e8260c270da74b5c2d86d61aee4b6d56977/bin/helpers/browser.sh
+# default
+MAKEFILES := 
+# automatic
+<F = $(notdir $<)
+# environment
+LC_ALL = C
+# automatic
+^F = $(notdir $^)
+# default
+SUFFIXES := 
+# environment
+REMOTE_CONTAINERS_SOCKETS = ["/tmp/vscode-ssh-auth-ed1c734fe55f9c35c27c985f49d69d21545d2b38.sock"]
+# default
+.INCLUDE_DIRS = /usr/include /usr/local/include /usr/include
+# default
+.RECIPEPREFIX := 
+# environment
+LANG = C
+# environment
+VSCODE_EXTHOST_WILL_SEND_SOCKET = true
+# variable set hash-table stats:
+# Load=71/1024=7%, Rehash=0, Collisions=8/100=8%
+
+# Pattern-specific Variable Values
+
+# No pattern-specific variable values.
+
+# Directories
+
+# . (device 143, inode 3147927): 38 files, no impossibilities.
+
+# 38 files, no impossibilities in 1 directories.
+
+# Implicit Rules
+
+# No implicit rules.
+
+# Files
+
+all: EduBtM_Test
+#  Command line target.
+#  Implicit rule search has been done.
+#  File does not exist.
+#  File has not been updated.
+
+# Not a target:
+edubtm_FreePages.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_Fetch.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_Compact.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_Split.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+Makefile:
+#  Implicit rule search has been done.
+ 
+#  Last modified 2022-05-14 17:18:55.040285086
+#  File has been updated.
+#  Successfully updated.
+
+# Not a target:
+EduBtM_CreateIndex.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_LastObject.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+.KEEP_STATE:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_Test.o:
+#  Implicit rule search has been done.
+#  File does not exist.
+#  File has not been updated.
+
+EduBtM_Test: EduBtM_Test.o EduBtM_TestModule.o EduBtM.o
+#  Implicit rule search has not been done.
+#  File does not exist.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 34):
+	$(CC) $(CFLAGS) -o $@ $^ $(LIB)
+
+# Not a target:
+edubtm_BinarySearch.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_InitPage.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+.DEFAULT:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+clean:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 42):
+	$(RM) -f $(EXEC) $(INTERFACE) $(NONINTERFACE) $(TESTMODULE) EduBtM.o
+
+# Not a target:
+EduBtM_FetchNext.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_TestModule.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_DropIndex.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_FirstObject.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+EduBtM.o: EduBtM_CreateIndex.o EduBtM_DeleteObject.o EduBtM_DropIndex.o EduBtM_Fetch.o EduBtM_FetchNext.o EduBtM_InsertObject.o edubtm_BinarySearch.o edubtm_Compact.o edubtm_Compare.o edubtm_Delete.o edubtm_FirstObject.o edubtm_FreePages.o edubtm_InitPage.o edubtm_Insert.o edubtm_LastObject.o edubtm_Split.o edubtm_root.o
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+#  recipe to execute (from 'Makefile', line 37):
+	@echo ld -r ~~~ -o $@
+	@ld -r $^ cosmos.o util_hash.o -o $@
+	chmod -x $@
+
+# Not a target:
+edubtm_Compare.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_InsertObject.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_root.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_Insert.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+EduBtM_DeleteObject.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# Not a target:
+edubtm_Delete.o:
+#  Implicit rule search has not been done.
+#  Modification time never checked.
+#  File has not been updated.
+
+# files hash-table stats:
+# Load=27/1024=3%, Rehash=0, Collisions=0/61=0%
+# VPATH Search Paths
+
+# No 'vpath' search paths.
+
+# No general ('VPATH' variable) search path.
+
+# strcache buffers: 1 (0) / strings = 66 / storage = 982 B / avg = 14 B
+# current buf: size = 8162 B / used = 982 B / count = 66 / avg = 14 B
+
+# strcache performance: lookups = 78 / hit rate = 15%
+# hash-table stats:
+# Load=66/8192=1%, Rehash=0, Collisions=1/78=1%
+# Finished Make data base on Sun May 15 22:16:49 2022
+
+ 

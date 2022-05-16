@@ -99,7 +99,27 @@ Four edubtm_InitLeaf(
     Four e;			/* error number */
     BtreeLeaf *page;		/* a page pointer */
 
+    // 1) Page header를 leaf page로 초기화함
+    e = BfM_GetNewTrain(leaf, (char**)&page, PAGE_BUF);
+    if (e < 0) ERR(e);
 
+    page->hdr.pid = *leaf;
+    page->hdr.flags = 3;
+    if (root) {
+        page->hdr.type = 0b101;
+    } else {
+        page->hdr.type = 0b100;
+    }
+    page->hdr.nSlots = 0;
+    page->hdr.free = 0;
+    page->hdr.prevPage = NIL;
+    page->hdr.nextPage = NIL;
+    page->hdr.unused = 0;
+
+    e = BfM_SetDirty(leaf, PAGE_BUF);
+    if(e) ERRB1(e, leaf, PAGE_BUF);
+    e = BfM_FreeTrain(leaf, PAGE_BUF);
+    if(e) ERR(e);
     
     return(eNOERROR);
     

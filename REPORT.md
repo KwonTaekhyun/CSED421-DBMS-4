@@ -1,22 +1,175 @@
 # EduBtM Report
 
-Name:
+Name: 권택현
 
-Student id:
+Student id: 20180522
 
 # Problem Analysis
 
-FILL WITH YOUR ANALYSIS
+EduCOSMOS project의 B+ tree 색인 manager에 대한 연산들을 구현을 목표로 하며
+구체적으로는 B+ tree 색인 및 색인 page 관련 구조에 대한 연산들을 구현할 것이다.
+이는 오디세우스/COSMOS BtM의 기능들 중 극히 제한된 일부 기능들만을 구현한 것이다.
 
 # Design For Problem Solving
 
 ## High Level
 
-FILL WITH YOUR HIGH LEVEL DESIGN
+EduBtM_CreateIndex
+
+    색인 file에서 새로운 B+ tree 색인을 생성하고, 생성된 색인의 root page의 page ID를 반환함
+
+    1) btm_AllocPage()를 호출하여 색인 file의 첫 번째 page를 할당 받음
+    2) 할당 받은 page를 root page로 초기화함
+    3) 초기화된 root page의 page ID를 반환함
+
+EduBtM_DropIndex
+
+    색인 file에서 B+ tree 색인을 삭제함
+
+    1) B+ tree 색인의 root page 및 모든 자식 page들을 각각 deallocate 함
+
+EduBtM_Fetch
+
+    B+ tree 색인에서 검색 조건을 만족하는 첫 번째 object를 검색하고, 검색된 object를 가리키는 cursor를 반환함
+
+    1) 파라미터로 주어진 startCompOp가 SM_BOF일 경우, B+ tree 색인의 첫 번째 object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함
+    2) 파라미터로 주어진 startCompOp가 SM_EOF일 경우, B+ tree 색인의 마지막 object (가장 큰 key 값을 갖는 leaf index entry) 를 검색함
+    3) 이외의 경우, edubtm_Fetch()를 호출하여 B+ tree 색인에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색함
+    4) 검색된 leaf index entry를 가리키는 cursor를 반환함
+
+edubtm_FetchNext
+
+    B+ tree 색인에서 검색 조건을 만족하는 현재 leaf index entry의 다음 leaf index entry를 검색하고, 검색된 leaf index entry를 가리키는 cursor를 반환함. 검색 조건이 SM_GT, SM_GE, SM_BOF일 경우 key 값이 작아지는 방향으로 backward scan을 하며, 그 외의 경우 key 값이 커지는 방향으로 forward scan을 한다
+
+    1) 검색 조건을 만족하는 다음 leaf index entry를 검색함
+    2) 검색된 leaf index entry를 가리키는 cursor를 반환함
+
+EduBtM_InsertObject
+
+    B+ tree 색인에 새로운 object를 삽입함
+
+    1) edubtm_Insert()를 호출하여 새로운 object에 대한 <object의 key, object ID> pair를 B+ tree 색인에 삽입함
+    2) Root page에서 split이 발생하여 새로운 root page 생성이 필요한 경우, edubtm_root_insert()를 호출하여 이를 처리함
 
 ## Low Level
 
-FILL WITH YOUR LOW LEVEL (CODE LEVEL) DESIGN
+edubtm_InitLeaf
+
+    Page를 B+ tree 색인의 leaf page로 초기화함
+
+    1) Page header를 leaf page로 초기화함
+
+edubtm_FreePages
+
+    B+ tree 색인 page를 deallocate 함
+
+    1) 파라미터로 주어진 page의 모든 자식 page들에 대해 재귀적으로 edubtm_FreePages()를 호출하여 해당 page들을 deallocate 함
+    2) 파라미터로 주어진 page를 deallocate 함
+        2-1) Page header의 type에서 해당 page가 deallocate 될 page임을 나타내는 bit를 set 및 나머지 bit들을 unset 함
+        2-2) 해당 page를 deallocate 함
+
+edubtm_Fetch
+
+    파라미터로 주어진 page를 root page로 하는 B+ tree 색인에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색하고, 검색된 leaf index entry를 가리키는 cursor를 반환함. 
+    (첫 번째 object는, 검색 조건을 만족하는 object들 중 검색 시작 key 값과 가장 가까운 key 값을 가지는 object를 의미함)
+
+    1) 파라미터로 주어진 root page가 internal page인 경우,
+        1-1) 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf page를 찾기 위해 다음으로 방문할 자식 page를 결정함
+        1-2) 결정된 자식 page를 root page로 하는 B+ subtree에서 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 leaf index entry를 검색하기 위해 재귀적으로 edubtm_Fetch()를 호출함
+        1-3) 검색된 leaf index entry를 가리키는 cursor를 반환함
+    2) 파라미터로 주어진 root page가 leaf page인 경우,
+        2-1) 검색 조건을 만족하는 첫 번째 <object의 key, object ID> pair가 저장된 index entry를 검색함
+        (검색 종료 연산자가 SM_LT, SM_LE, SM_GT, SM_GE, SM_EQ 중 하나일 때에만, 검색 시작 조건을 이용해 찾은 key 값과 검색 종료 조건을 비교하여 검색함)
+        2-2) 검색된 index entry를 가리키는 cursor를 반환함
+
+edubtm_FirstObject
+
+    B+ tree 색인에서 첫 번째 object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함
+
+    1) B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 가리키는 cursor를 반환함
+    2) 검색 종료 key 값이 첫 번째 object의 key 값 보다 작거나, key 값은 같으나 검색 종료 연산이 SM_LT인 경우 CURSOR_EOS 반환 
+
+edubtm_LastObject
+
+    B+ tree 색인에서 마지막 object (가장 큰 key값을 갖는 leaf index entry) 를 검색함
+
+    1) B+ tree 색인의 마지막 leaf page의 마지막 index entry (slot 번호 = nSlots - 1) 를 가리키는 cursor를 반환함
+    2) 검색 종료 key 값이 마지막 object의 key 값 보다 크거나, key 값은 같으나 검색 종료 연산이 SM_GT인 경우 CURSOR_EOS 반환 
+
+edubtm_BinarySearchLeaf
+
+    Leaf page에서 파라미터로 주어진 key 값보다 작거나 같은 key 값을 갖는 index entry를 검색하고, 검색된 index entry의 위치 (slot 번호) 를 반환함
+
+    1) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하는 경우, 해당 index entry의 slot 번호 및 TRUE를 반환함
+    2) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하지 않는 경우, 파라미터로 주어진 key 값보다 작은 key 값을 갖는 index entry들 중 가장 큰 key 값을 갖는 index entry의 slot 번호 및 FALSE를 반환함. 주어진 key 값보다 작은 key 값을 갖는 entry가 없을 경우 slot 번호로 -1을 반환함.
+
+edubtm_BinarySearchInternal
+
+    Internal page에서 파라미터로 주어진 key 값보다 작거나 같은 key 값을 갖는 index entry를 검색하고, 검색된 index entry의 위치 (slot 번호) 를 반환함
+
+    1) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하는 경우, 해당 index entry의 slot 번호 및 TRUE를 반환함
+    2) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하지 않는 경우, 파라미터로 주어진 key 값보다 작은 key 값을 갖는 index entry들 중 가장 큰 key 값을 갖는 index entry의 slot 번호 및 FALSE를 반환함. 주어진 key 값보다 작은 key 값을 갖는 entry가 없을 경우 slot 번호로 -1을 반환함.
+
+edubtm_KeyCompare
+
+    파라미터로 주어진 두 key 값의 대소를 비교하고, 비교 결과를 반환함. Variable length string의 경우 사전식 순서를 이용하여 비교함
+
+    1) 두 key 값이 같은 경우, EQUAL을 반환함
+    2) 첫 번째 key 값이 큰 경우, GREATER를 반환함
+    3) 첫 번째 key 값이 작은 경우, LESS를 반환함
+
+
+
+edubtm_Insert
+
+    파라미터로 주어진 page를 root page로 하는 B+ tree 색인에 새로운 object에 대한 <object의 key, object ID> pair를 삽입하고, root page에서 split이 발생한 경우, split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+
+    1) 파라미터로 주어진 root page가 internal page인 경우
+        1-1) 새로운 <object의 key, object ID> pair를 삽입할 leaf page를 찾기 위해 다음으로 방문할 자식 page를 결정함
+        1-2) 결정된 자식 page를 root page로 하는 B+ subtree에 새로운 <object의 key, object ID> pair를 삽입하기 위해 재귀적으로 edubtm_Insert()를 호출함
+        1-3) 결정된 자식 page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 파라미터로 주어진 root page에 삽입함
+        1-4) 파라미터로 주어진 root page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+    2) 파라미터로 주어진 root page가 leaf page인 경우
+        2-1) edubtm_InsertLeaf()를 호출하여 해당 page에 새로운 <object의 key, object ID> pair를 삽입함
+        2-2) Split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
+
+edubtm_InsertLeaf
+
+    Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+    1) 새로운 index entry의 삽입 위치 (slot 번호) 를 결정함
+    2) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
+    3) Page에 여유 영역이 있는 경우,
+        3-1) 필요시 page를 compact 함
+        3-2) 결정된 slot 번호로 새로운 index entry를 삽입함
+    4) Page에 여유 영역이 없는 경우 (page overflow),
+        4-1) edubtm_SplitLeaf()를 호출하여 page를 split 함
+        4-2) Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+edubtm_InsertInternal
+
+    Internal page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
+
+    1) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
+    2) Page에 여유 영역이 있는 경우,
+        2-1) 필요시 page를 compact 함
+        2-2) 파라미터로 주어진 slot 번호의 다음 slot 번호로 새로운 index entry를 삽입함
+    3) Page에 여유 영역이 없는 경우 (page overflow),
+        3-1) edubtm_SplitInternal()을 호출하여 page를 split 함
+        3-2) Split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
+
+edubtm_SplitLeaf
+
+    Overflow가 발생한 leaf page를 split 하여 파라미터로 주어진 index entry를 삽입하고, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+    1) 새로운 page를 할당 받음
+    2) 할당 받은 page를 leaf page로 초기화함
+    3) 기존 index entry들 및 삽입할 index entry를 key 순으로 정렬하여 overflow가 발생한 page 및 할당 받은 page에 나누어 저장함
+    4) 할당 받은 page를 leaf page들간의 doubly linked list에 추가함
+    5) 할당 받은 page를 가리키는 internal index entry를 생성함
+    6) Split된 page가 ROOT일 경우, type을 LEAF로 변경함
+    7) 생성된 index entry를 반환함
+
 
 # Mapping Between Implementation And the Design
 

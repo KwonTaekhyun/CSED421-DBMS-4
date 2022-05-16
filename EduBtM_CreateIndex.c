@@ -70,7 +70,25 @@ Four EduBtM_CreateIndex(
     sm_CatOverlayForBtree *catEntry; /* pointer to Btree file catalog information */
     PhysicalFileID pFid;	/* physical file ID */
 
+    //색인 file에서 새로운 B+ tree 색인을 생성하고, 생성된 색인의 root page의 page ID를 반환한다
 
+    // 1) btm_AllocPage()를 호출하여 색인 file의 첫 번째 page를 할당 받음
+    e = BfM_GetTrain((TrainID*)catObjForFile, (char**)&catPage, PAGE_BUF);
+    if (e < 0) ERR(e);
+
+    GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
+    MAKE_PAGEID(pFid, catEntry->fid.volNo, catEntry->firstPage);
+
+    e = btm_AllocPage(catObjForFile, (PageID*)&pFid, rootPid);
+    if (e<0) ERR(e);
+    // 2) 할당 받은 page를 root page로 초기화함
+    e = edubtm_InitLeaf(rootPid, TRUE, FALSE);
+    if (e<0) ERR(e);
+
+    e = BfM_FreeTrain((TrainID*)catObjForFile, PAGE_BUF);
+    if (e<0) ERR(e);
+    // 3) 초기화된 root page의 page ID를 반환함
+    // ID를 반환함
 
     return(eNOERROR);
     

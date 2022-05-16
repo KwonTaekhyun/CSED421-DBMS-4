@@ -87,7 +87,50 @@ Boolean edubtm_BinarySearchInternal(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+    
+    // Internal page에서 파라미터로 주어진 key 값보다 작거나 같은 key 값을 갖는 index entry를 검색하고, 검색된 index entry의 위치 (slot 번호) 를 반환함
 
+    if(ipage->hdr.nSlots == 0)
+	{	
+		*idx = -1;
+		return FALSE;
+	}
+    // 1) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하는 경우, 해당 index entry의 slot 번호 및 TRUE를 반환함
+    // 2) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하지 않는 경우, 파라미터로 주어진 key 값보다 작은 key 값을 갖는 index entry들 중 가장 큰 key 값을 갖는 index entry의 slot 번호 및 FALSE를 반환함. 주어진 key 값보다 작은 key 값을 갖는 entry가 없을 경우 slot 번호로 -1을 반환함.
+    low = 0;
+	high = ipage->hdr.nSlots-1;
+
+    while (low <= high) 
+	{
+		mid = (low + high)/2;
+
+		entry = &(ipage->data[ipage->slot[-mid]]);
+		cmp = edubtm_KeyCompare(kdesc, &entry->klen, kval);
+
+        if (cmp == LESS) 		
+            low = mid+1;
+		else if (cmp == EQUAL) 	
+            break;
+		else 					
+            high = mid-1;
+	}
+
+	if (cmp == EQUAL)
+	{
+		*idx = mid;
+		return TRUE;
+	}
+	else
+	{
+        while((cmp != LESS)&&(mid>=0)){
+            mid--;
+            entry = &(ipage->data[ipage->slot[-mid]]);
+		    cmp = edubtm_KeyCompare(kdesc, &entry->klen, kval);
+        }
+
+        *idx = mid;
+        return FALSE;
+	}
     
 } /* edubtm_BinarySearchInternal() */
 
@@ -135,5 +178,48 @@ Boolean edubtm_BinarySearchLeaf(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // Leaf page에서 파라미터로 주어진 key 값보다 작거나 같은 key 값을 갖는 index entry를 검색하고, 검색된 index entry의 위치 (slot 번호) 를 반환함
+
+    if(lpage->hdr.nSlots == 0)
+	{	
+		*idx = -1;
+		return FALSE;
+	}
+    // 1) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하는 경우, 해당 index entry의 slot 번호 및 TRUE를 반환함
+    // 2) 파라미터로 주어진 key 값과 같은 key 값을 갖는 index entry가 존재하지 않는 경우, 파라미터로 주어진 key 값보다 작은 key 값을 갖는 index entry들 중 가장 큰 key 값을 갖는 index entry의 slot 번호 및 FALSE를 반환함. 주어진 key 값보다 작은 key 값을 갖는 entry가 없을 경우 slot 번호로 -1을 반환함.
+    low = 0;
+	high = lpage->hdr.nSlots-1;
+
+    while (low <= high) 
+	{
+		mid = (low + high)/2;
+
+		entry = &(lpage->data[lpage->slot[-mid]]);
+		cmp = edubtm_KeyCompare(kdesc, &entry->klen, kval);
+
+        if (cmp == LESS) 		
+            low = mid+1;
+		else if (cmp == EQUAL) 	
+            break;
+		else 					
+            high = mid-1;
+	}
+
+	if (cmp == EQUAL)
+	{
+		*idx = mid;
+		return TRUE;
+	}
+	else
+	{
+        while((cmp != LESS)&&(mid>=0)){
+            mid--;
+            entry = &(lpage->data[lpage->slot[-mid]]);
+		    cmp = edubtm_KeyCompare(kdesc, &entry->klen, kval);
+        }
+
+        *idx = mid;
+        return FALSE;
+	}
     
 } /* edubtm_BinarySearchLeaf() */

@@ -96,7 +96,16 @@ Four EduBtM_InsertObject(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-    
+
+
+    // B+ tree 색인에 새로운 object를 삽입함
+
+    // 1) edubtm_Insert()를 호출하여 새로운 object에 대한 <object의 key, object ID> pair를 B+ tree 색인에 삽입함
+    edubtm_Insert(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    // 2) Root page에서 split이 발생하여 새로운 root page 생성이 필요한 경우, edubtm_root_insert()를 호출하여 이를 처리함
+    if(lh){
+        edubtm_root_insert(catObjForFile, root, &item);
+    }
     
     return(eNOERROR);
     

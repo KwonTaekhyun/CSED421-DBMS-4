@@ -89,7 +89,43 @@ Four edubtm_FirstObject(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-    
+
+    // B+ tree 색인에서 첫 번째 object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함
+
+    // 1) B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 가리키는 cursor를 반환함
+    e = BfM_GetTrain(root, &apage, PAGE_BUF);
+	if (e) ERR(e);
+
+    if (apage->any.hdr.type & INTERNAL)
+	{
+		MAKE_PAGEID(child, root->volNo, apage->bi.hdr.p0);
+		edubtm_FirstObject(&child, kdesc, stopKval, stopCompOp, cursor);
+	}
+	else if (apage->any.hdr.type & LEAF)
+	{
+        lEntryOffset = apage->bl.slot[0];
+        lEntry = &(apage->bl.data[lEntryOffset]);
+		alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+		
+		memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
+
+        cmp = edubtm_KeyCompare(kdesc, stopKval, &cursor->key);
+
+        if(cmp == LESS || (cmp == EQUAL && stopCompOp == SM_LT)){
+            cursor->flag = CURSOR_EOS;
+        }
+        else {
+            cursor->flag = CURSOR_ON;
+            cursor->leaf = *root;
+            cursor->slotNo = 0;
+
+            alignedKlen = ALIGNED_LENGTH(cursor->key.len);
+            cursor->oid = ((ObjectID *)&lEntry->kval[alignedKlen])[0];
+        }
+	}
+    // 2) 검색 종료 key 값이 첫 번째 object의 key 값 보다 작거나, key 값은 같으나 검색 종료 연산이 SM_LT인 경우 CURSOR_EOS 반환 
+    e = BfM_FreeTrain(root, PAGE_BUF);
+	if (e < 0) ERR(e);
 
     return(eNOERROR);
     

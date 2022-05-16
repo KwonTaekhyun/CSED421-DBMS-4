@@ -1,0 +1,27 @@
+make all --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/DBMS/DBMS-4'
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_Test.o EduBtM_Test.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_TestModule.o EduBtM_TestModule.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_CreateIndex.o EduBtM_CreateIndex.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_DeleteObject.o EduBtM_DeleteObject.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_DropIndex.o EduBtM_DropIndex.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_Fetch.o EduBtM_Fetch.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_FetchNext.o EduBtM_FetchNext.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o EduBtM_InsertObject.o EduBtM_InsertObject.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_BinarySearch.o edubtm_BinarySearch.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_Compact.o edubtm_Compact.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_Compare.o edubtm_Compare.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_Delete.o edubtm_Delete.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_FirstObject.o edubtm_FirstObject.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_FreePages.o edubtm_FreePages.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_InitPage.o edubtm_InitPage.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_Insert.o edubtm_Insert.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_LastObject.o edubtm_LastObject.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_Split.o edubtm_Split.c
+gcc -w -g -fsigned-char -fPIC -I./Header   -c -o edubtm_root.o edubtm_root.c
+echo ld -r ~~~ -o EduBtM.o
+ld -r EduBtM_CreateIndex.o EduBtM_DeleteObject.o EduBtM_DropIndex.o EduBtM_Fetch.o EduBtM_FetchNext.o EduBtM_InsertObject.o edubtm_BinarySearch.o edubtm_Compact.o edubtm_Compare.o edubtm_Delete.o edubtm_FirstObject.o edubtm_FreePages.o edubtm_InitPage.o edubtm_Insert.o edubtm_LastObject.o edubtm_Split.o edubtm_root.o cosmos.o util_hash.o -o EduBtM.o
+chmod -x EduBtM.o
+gcc -w -g -fsigned-char -fPIC -I./Header -o EduBtM_Test EduBtM_Test.o EduBtM_TestModule.o EduBtM.o -lm
+make: Leaving directory '/DBMS/DBMS-4'
+ 
