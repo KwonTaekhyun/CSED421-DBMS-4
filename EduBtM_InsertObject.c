@@ -101,10 +101,12 @@ Four EduBtM_InsertObject(
     // B+ tree 색인에 새로운 object를 삽입함
 
     // 1) edubtm_Insert()를 호출하여 새로운 object에 대한 <object의 key, object ID> pair를 B+ tree 색인에 삽입함
-    edubtm_Insert(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    e = edubtm_Insert(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    if (e) ERR(e);
     // 2) Root page에서 split이 발생하여 새로운 root page 생성이 필요한 경우, edubtm_root_insert()를 호출하여 이를 처리함
     if(lh){
-        edubtm_root_insert(catObjForFile, root, &item);
+        e = edubtm_root_insert(catObjForFile, root, &item);
+		if (e) ERR(e);
     }
     
     return(eNOERROR);

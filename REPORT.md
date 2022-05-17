@@ -118,8 +118,6 @@ edubtm_KeyCompare
     2) 첫 번째 key 값이 큰 경우, GREATER를 반환함
     3) 첫 번째 key 값이 작은 경우, LESS를 반환함
 
-
-
 edubtm_Insert
 
     파라미터로 주어진 page를 root page로 하는 B+ tree 색인에 새로운 object에 대한 <object의 key, object ID> pair를 삽입하고, root page에서 split이 발생한 경우, split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
@@ -133,18 +131,18 @@ edubtm_Insert
         2-1) edubtm_InsertLeaf()를 호출하여 해당 page에 새로운 <object의 key, object ID> pair를 삽입함
         2-2) Split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
 
-edubtm_InsertLeaf
+edubtm_root_insert
 
-    Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+    Root page가 split 된 B+ tree 색인을 위한 새로운 root page를 생성함
 
-    1) 새로운 index entry의 삽입 위치 (slot 번호) 를 결정함
-    2) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
-    3) Page에 여유 영역이 있는 경우,
-        3-1) 필요시 page를 compact 함
-        3-2) 결정된 slot 번호로 새로운 index entry를 삽입함
-    4) Page에 여유 영역이 없는 경우 (page overflow),
-        4-1) edubtm_SplitLeaf()를 호출하여 page를 split 함
-        4-2) Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+    1) 새로운 page를 할당 받음
+    2) 기존 root page를 할당 받은 page로 복사함
+    3) 기존 root page를 새로운 root page로서 초기화함 (B+ tree 색인의 root page의 page ID를 일관되게 유지하기 위함)
+    4) 할당 받은 page와 root page split으로 생성된 page가 새로운 root page의 자식 page들이 되도록 설정함
+        4-1) Split으로 생성된 page를 가리키는 internal index entry를 새로운 root page에 삽입함
+        4-2) 새로운 root page의 header의 p0 변수에 할당 받은 page의 번호를 저장함
+        4-3) 새로운 root page의 두 자식 page들이 leaf인 경우, 두 자식 page들간의 doubly linked list를 설정함
+            (Split으로 생성된 page가 할당 받은 page의 다음 page가 되도록 설정함)
 
 edubtm_InsertInternal
 
@@ -157,6 +155,19 @@ edubtm_InsertInternal
     3) Page에 여유 영역이 없는 경우 (page overflow),
         3-1) edubtm_SplitInternal()을 호출하여 page를 split 함
         3-2) Split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
+
+edubtm_InsertLeaf
+
+    Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+
+    1) 새로운 index entry의 삽입 위치 (slot 번호) 를 결정함
+    2) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
+    3) Page에 여유 영역이 있는 경우,
+        3-1) 필요시 page를 compact 함
+        3-2) 결정된 slot 번호로 새로운 index entry를 삽입함
+    4) Page에 여유 영역이 없는 경우 (page overflow),
+        4-1) edubtm_SplitLeaf()를 호출하여 page를 split 함
+        4-2) Split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
 
 edubtm_SplitLeaf
 

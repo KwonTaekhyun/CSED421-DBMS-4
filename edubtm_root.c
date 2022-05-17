@@ -80,7 +80,54 @@ Four edubtm_root_insert(
     btm_InternalEntry *entry;	/* an internal entry */
     Boolean   isTmp;
 
+    // Root page가 split 된 B+ tree 색인을 위한 새로운 root page를 생성함
 
+    // 1) 새로운 page를 할당 받음
+    btm_AllocPage(catObjForFile, root, &newPid);
+    BfM_GetNewTrain(&newPid, &newPage, PAGE_BUF);
+    BfM_GetTrain(root, &rootPage, PAGE_BUF);
+    // 2) 기존 root page를 할당 받은 page로 복사함
+    memcpy(newPage, rootPage, sizeof(BtreePage));
+    // 3) 기존 root page를 새로운 root page로서 초기화함 (B+ tree 색인의 root page의 page ID를 일관되게 유지하기 위함)
+    btm_InitInternal(root, TRUE, TRUE);
+
+    newPage->any.hdr.pid=newPid;
+    newPage->bi.hdr.pid=newPid;
+    newPage->bl.hdr.pid=newPid;
+
+    // 4) 할당 받은 page와 root page split으로 생성된 page가 새로운 root page의 자식 page들이 되도록 설정함
+    
+    // 4-1) Split으로 생성된 page를 가리키는 internal index entry를 새로운 root page에 삽입함
+    entry = rootPage->bi.data + rootPage->bi.hdr.free;
+	entry->spid = item->spid;
+	entry->klen = item->klen;
+	memcpy(entry->kval, item->kval, entry->klen);
+
+    rootPage->bi.slot[-1*rootPage->bi.hdr.nSlots] = rootPage->bi.hdr.free;
+	rootPage->bi.hdr.free += sizeof(ShortPageID) + 2*sizeof(Two) + ALIGNED_LENGTH(entry->klen);
+	rootPage->bi.hdr.nSlots++;
+
+    // 4-2) 새로운 root page의 header의 p0 변수에 할당 받은 page의 번호를 저장함
+    rootPage->bi.hdr.p0 = newPid.pageNo;
+
+    // 4-3) 새로운 root page의 두 자식 page들이 leaf인 경우, 두 자식 page들간의 doubly linked list를 설정함
+    //     (Split으로 생성된 page가 할당 받은 page의 다음 page가 되도록 설정함)
+    MAKE_PAGEID(nextPid, root->volNo, entry->spid);
+    BfM_GetTrain(&nextPid, &nextPage, PAGE_BUF);
+
+    if ((newPage->any.hdr.type & LEAF) && (nextPage->hdr.type & LEAF))
+	{
+		newPage->bl.hdr.nextPage = nextPid.pageNo;
+		nextPage->hdr.prevPage = newPid.pageNo;	
+	}
+
+    BfM_SetDirty(&nextPid, PAGE_BUF);
+    BfM_SetDirty(&newPid, PAGE_BUF);
+    BfM_SetDirty(root, PAGE_BUF);
+
+    BfM_FreeTrain(&nextPid, PAGE_BUF);
+    BfM_FreeTrain(&newPid, PAGE_BUF);
+    BfM_FreeTrain(root, PAGE_BUF);
     
     return(eNOERROR);
     
