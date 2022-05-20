@@ -116,7 +116,7 @@ Four edubtm_Insert(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-
+    
     // 파라미터로 주어진 page를 root page로 하는 B+ tree 색인에 새로운 object에 대한 <object의 key, object ID> pair를 삽입하고, root page에서 split이 발생한 경우, split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
 
     *h=FALSE;
@@ -232,20 +232,25 @@ Four edubtm_InsertLeaf(
     
     /*@ Initially the flags are FALSE */
     *h = *f = FALSE;
-    
-    // Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
 
+    // Leaf page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 leaf page를 가리키는 internal index entry를 반환함
+	
     // 1) 새로운 index entry의 삽입 위치 (slot 번호) 를 결정함
     found = edubtm_BinarySearchLeaf(page, kdesc, kval, &idx);
     if (found)  ERR(eDUPLICATEDKEY_BTM);
+
     // 2) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
-    alignedKlen = ALIGNED_LENGTH(kval->len);
-    entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + OBJECTID_SIZE;
-    if (BL_FREE(page) >= entryLen + sizeof(Two)) {
+	if (kdesc->kpart[0].type == SM_INT)
+		alignedKlen = ALIGNED_LENGTH(kdesc->kpart[0].length);
+	else
+        alignedKlen = ALIGNED_LENGTH(kval->len);
+	entryLen = sizeof(Two) * 2 + alignedKlen + OBJECTID_SIZE;
+
+	if (BL_FREE(page) >= entryLen + sizeof(Two)) {
         // 3) Page에 여유 영역이 있는 경우,
         // 3-1) 필요시 page를 compact 함
         if (BL_CFREE(page) < entryLen + sizeof(Two)){
-            btm_CompactLeafPage(page, NIL);
+            edubtm_CompactLeafPage(page, NIL);
         }
         // 3-2) 결정된 slot 번호로 새로운 index entry를 삽입함
         // Page의 contiguous free area에 새로운 index entry를 복사함
@@ -280,12 +285,10 @@ Four edubtm_InsertLeaf(
         leaf.klen = kval->len;
         memcpy(leaf.kval, kval->val, leaf.klen);
 
-        btm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
+        edubtm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
 
         *h = TRUE;
     }
-
-
     return(eNOERROR);
     
 } /* edubtm_InsertLeaf() */
@@ -333,43 +336,42 @@ Four edubtm_InsertInternal(
     
     /*@ Initially the flag are FALSE */
     *h = FALSE;
-    
+
     // Internal page에 새로운 index entry를 삽입하고, split이 발생한 경우, split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
 
     // 1) 새로운 index entry 삽입을 위해 필요한 자유 영역의 크기를 계산함
     entryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen);
-    if (BI_FREE(page) >= entryLen + sizeof(Two)) {
+    
+	if (BI_FREE(page) >= entryLen + sizeof(Two))
+	{
         // 2) Page에 여유 영역이 있는 경우,
         // 2-1) 필요시 page를 compact 함
-        if (BI_CFREE(page) < entryLen + sizeof(Two)) btm_CompactInternalPage(page, NIL);
-
         // 2-2) 파라미터로 주어진 slot 번호의 다음 slot 번호로 새로운 index entry를 삽입함
-        // Page의 contiguous free area에 새로운 index entry를 복사함
-        // 결정된 slot 번호를 갖는 slot을 사용하기 위해 slot array를 재배열함
-        // 결정된 slot 번호를 갖는 slot에 새로운 index entry의 offset을 저장함
-        // Page의 header를 갱신함
+		if (BI_CFREE(page) < entryLen + sizeof(Two))
+			edubtm_CompactInternalPage(page, NIL);
+		
+		for (i = page->hdr.nSlots-1; i >= (high+1); i--)
+			page->slot[-1*(i+1)] = page->slot[-1*i];
+        page->slot[-(high+1)] = page->hdr.free;
 
-        for(i=page->hdr.nSlots; i>(high+1); i--)
-            page->slot[-i] = page->slot[-i+1];
-
-        entryOffset = page->slot[-(high + 1)] = page->hdr.free;
-        entry = (btm_InternalEntry*)(&page->data[entryOffset]);
-        memcpy(entry, item, entryLen);
-
-        page->hdr.free += entryLen;
-        page->hdr.nSlots++;
-    }
-    else {
+        entry = page->data + page->hdr.free;
+		entry->spid = item->spid;
+		entry->klen = item->klen;
+		memcpy(&entry->kval, item->kval, item->klen);
+		
+		page->hdr.free += entryLen;
+		page->hdr.nSlots++;
+	}
+	else
+	{
         // 3) Page에 여유 영역이 없는 경우 (page overflow),
         // 3-1) edubtm_SplitInternal()을 호출하여 page를 split 함
         // 3-2) Split으로 생성된 새로운 internal page를 가리키는 internal index entry를 반환함
-        btm_SplitInternal(catObjForFile, page, high, item, ritem);
+		edubtm_SplitInternal(catObjForFile, page, high, item, ritem);
 
         *h = TRUE;
-    }
-    
+	}
 
     return(eNOERROR);
     
 } /* edubtm_InsertInternal() */
-

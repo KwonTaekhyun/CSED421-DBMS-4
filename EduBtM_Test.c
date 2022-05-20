@@ -737,7 +737,7 @@ void execute(
 			else
 			{
 				/* The successful default solution code is called if "Edu" is omitted from the function name in the following line */
-				e = BtM_DeleteObject(catalogEntry, rootPid, kdesc, &kval, &(cursor.oid), &dlPool, &dlHead);
+				e = EduBtM_DeleteObject(catalogEntry, rootPid, kdesc, &kval, &(cursor.oid), &dlPool, &dlHead);
 				if (e == eNOTFOUND_BTM) {
 					fprintfWrapper(logFp,"There is no object that statisfies the condition.\n");
 					

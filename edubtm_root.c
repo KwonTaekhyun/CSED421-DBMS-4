@@ -89,7 +89,7 @@ Four edubtm_root_insert(
     // 2) 기존 root page를 할당 받은 page로 복사함
     memcpy(newPage, rootPage, sizeof(BtreePage));
     // 3) 기존 root page를 새로운 root page로서 초기화함 (B+ tree 색인의 root page의 page ID를 일관되게 유지하기 위함)
-    btm_InitInternal(root, TRUE, TRUE);
+    edubtm_InitInternal(root, TRUE, TRUE);
 
     newPage->any.hdr.pid=newPid;
     newPage->bi.hdr.pid=newPid;

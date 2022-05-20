@@ -62,8 +62,9 @@ Four EduBtM_DropIndex(
 {
     Four e;			/* for the error number */
 
+    // 색인 file에서 B+ tree 색인을 삭제함
 
-    /*@ Free all pages concerned with the root. */
+    // 1) B+ tree 색인의 root page 및 모든 자식 page들을 각각 deallocate 함
     e = edubtm_FreePages(pFid, rootPid, dlPool, dlHead);
     if (e) ERR(e);
 	

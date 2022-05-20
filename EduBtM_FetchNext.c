@@ -107,6 +107,11 @@ Four EduBtM_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // B+ tree 색인에서 검색 조건을 만족하는 현재 object의 다음 object를 검색하고, 검색된 object를 가리키는 cursor를 반환함
+
+    // 1) edubtm_FetchNext()를 호출하여 B+ tree 색인에서 검색 조건을 만족하는 현재 leaf index entry의 다음 leaf index entry를 검색함
+    // 2) 검색된 leaf index entry를 가리키는 cursor를 반환함
+    
     e = edubtm_FetchNext(kdesc, kval, compOp, current, next);
 	if (e) ERR(e);
     

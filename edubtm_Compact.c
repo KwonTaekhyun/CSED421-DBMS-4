@@ -72,7 +72,35 @@ void edubtm_CompactInternalPage(
     Two                 i;                      /* index variable */
     btm_InternalEntry   *entry;                 /* an entry in leaf page */
 
-    
+    // Internal page의 데이터 영역의 모든 자유 영역이 연속된 하나의 contiguous free area를 형성하도록 index entry들의 offset를 조정함
+
+    // 1) 파라미터로 주어진 slotNo가 NIL이 아닌 경우, slotNo에 대응하는 index entry를 제외한 page의 모든 index entry들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    //     slotNo에 대응하는 index entry를 데이터 영역 상에서의 마지막 index entry로 저장함
+    // 2) 파라미터로 주어진 slotNo가 NIL인 경우, Page의 모든 index entry들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    apageDataOffset = 0;
+    for(i = 0; i < apage->hdr.nSlots; i++){
+
+        if(i != slotNo){
+            entry = apage->data + apage->slot[-i];
+            len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
+            
+            memcpy(tpage.data + apageDataOffset, entry, len);
+            apage->slot[-i] = apageDataOffset;
+            apageDataOffset += len;
+        }
+    }
+    if(slotNo != NIL){
+        entry = apage->data + apage->slot[-slotNo];
+        len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
+
+        memcpy(tpage.data + apageDataOffset, entry, len);
+        apage->slot[-slotNo] = apageDataOffset;
+        apageDataOffset += len;
+    }
+    memcpy(apage->data, tpage.data, apageDataOffset);
+    // 3) Page header를 갱신함
+    apage->hdr.free = apageDataOffset;
+    apage->hdr.unused = 0;
 
 } /* edubtm_CompactInternalPage() */
 
@@ -110,6 +138,34 @@ void edubtm_CompactLeafPage(
     btm_LeafEntry 	*entry;			/* an entry in leaf page */
     Two 		alignedKlen;		/* aligned length of the key length */
 
-    
+    // Leaf page의 데이터 영역의 모든 자유 영역이 연속된 하나의 contiguous free area를 형성하도록 index entry들의 offset를 조정함
+
+	apageDataOffset = 0;
+    // 1) 파라미터로 주어진 slotNo가 NIL이 아닌 경우, slotNo에 대응하는 index entry를 제외한 page의 모든 index entry들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    //     slotNo에 대응하는 index entry를 데이터 영역 상에서의 마지막 index entry로 저장함
+    // 2) 파라미터로 주어진 slotNo가 NIL인 경우, Page의 모든 index entry들을 데이터 영역의 가장 앞부분부터 연속되게 저장함
+    for (i=0; i<apage->hdr.nSlots; i++)
+	{
+		if (i != slotNo)
+		{
+			entry = apage->data + apage->slot[-i];
+			len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
+			memcpy(tpage.data + apageDataOffset, entry, len);
+			apage->slot[-i] = apageDataOffset;
+			apageDataOffset += len;
+		}
+	}
+    if (slotNo != NIL)
+	{
+		entry = apage->data + apage->slot[-slotNo];
+		len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
+		memcpy(tpage.data + apageDataOffset, entry, len);
+		apage->slot[-slotNo] = apageDataOffset;
+		apageDataOffset += len;
+	}
+    memcpy(apage->data, tpage.data, apageDataOffset);
+    // 3) Page header를 갱신함
+    apage->hdr.free = apageDataOffset;
+	apage->hdr.unused = 0;
 
 } /* edubtm_CompactLeafPage() */

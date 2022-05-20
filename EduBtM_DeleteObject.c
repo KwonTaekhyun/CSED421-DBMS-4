@@ -103,13 +103,26 @@ Four EduBtM_DeleteObject(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+    // B+ tree 색인에서 object를 삭제함
 
-	/* Delete following 3 lines before implement this function */
-	printf("Implementation of delete operation is optional (not compulsory),\n");
-	printf("and delete operation has not been implemented yet.\n");
-	return(eNOTSUPPORTED_EDUBTM);
+    MAKE_PAGEID(pFid, catObjForFile->volNo, catObjForFile->pageNo);
+    // 1) edubtm_Delete()를 호출하여 삭제할 object에 대한 <object의 key, object ID> pair를 B+ tree 색인에서 삭제함
+    edubtm_Delete(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
+    if (lf == TRUE){
+        // 2) Root page에서 underflow가 발생한 경우, btm_root_delete()를 호출하여 이를 처리함. 
+        //     btm_root_delete()는 underflow가 발생한 root page가 비어있는지를 확인하여 비어있는 경우 root page를 삭제함
+        btm_root_delete(&pFid, root, dlPool, dlHead);
+        BfM_SetDirty(root, PAGE_BUF);
+    }
+    else if (lh == TRUE)
+	{
+        // 3) Root page에서 split이 발생한 경우, edubtm_root_insert()를 호출하여 이를 처리함
+        //     Redistribute 과정 중에 root page의 index entry가 length가 더 긴 index entry로 교체되었을 수 있으므로, root page에서 split이 발생할 수 있음
+		edubtm_root_insert(catObjForFile, root, &item);
+        BfM_SetDirty(root, PAGE_BUF);
+	}
 
-    
+	    
     return(eNOERROR);
     
 }   /* EduBtM_DeleteObject() */

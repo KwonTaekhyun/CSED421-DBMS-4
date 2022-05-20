@@ -66,7 +66,24 @@ Four edubtm_InitInternal(
     Four e;			/* error number */
     BtreeInternal *page;	/* a page pointer */
 
+    // Page를 B+ tree 색인의 internal page로 초기화함
 
+    // 1) Page header를 internal page로 초기화함
+    BfM_GetNewTrain(internal, &page, PAGE_BUF);
+
+    page->hdr.pid = *internal;
+    page->hdr.flags = 5;
+    page->hdr.type = INTERNAL;
+    if(root)
+        page->hdr.type |= ROOT;
+    
+    page->hdr.p0 = NIL;
+    page->hdr.nSlots = 0;
+    page->hdr.free = 0;
+    page->hdr.unused = 0;
+
+    BfM_SetDirty(internal, PAGE_BUF);
+    BfM_FreeTrain(internal, PAGE_BUF);
     
     return(eNOERROR);
     
@@ -100,8 +117,7 @@ Four edubtm_InitLeaf(
     BtreeLeaf *page;		/* a page pointer */
 
     // 1) Page header를 leaf page로 초기화함
-    e = BfM_GetNewTrain(leaf, (char**)&page, PAGE_BUF);
-    if (e < 0) ERR(e);
+    BfM_GetNewTrain(leaf, (char**)&page, PAGE_BUF);
 
     page->hdr.pid = *leaf;
     page->hdr.flags = 3;
