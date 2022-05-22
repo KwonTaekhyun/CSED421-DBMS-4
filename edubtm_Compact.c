@@ -82,20 +82,18 @@ void edubtm_CompactInternalPage(
 
         if(i != slotNo){
             entry = apage->data + apage->slot[-i];
-            len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
             
-            memcpy(tpage.data + apageDataOffset, entry, len);
+            memcpy(tpage.data + apageDataOffset, entry, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen));
             apage->slot[-i] = apageDataOffset;
-            apageDataOffset += len;
+            apageDataOffset += sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
         }
     }
     if(slotNo != NIL){
         entry = apage->data + apage->slot[-slotNo];
-        len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
 
-        memcpy(tpage.data + apageDataOffset, entry, len);
+        memcpy(tpage.data + apageDataOffset, entry, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen));
         apage->slot[-slotNo] = apageDataOffset;
-        apageDataOffset += len;
+        apageDataOffset += sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
     }
     memcpy(apage->data, tpage.data, apageDataOffset);
     // 3) Page header를 갱신함
@@ -149,19 +147,19 @@ void edubtm_CompactLeafPage(
 		if (i != slotNo)
 		{
 			entry = apage->data + apage->slot[-i];
-			len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
-			memcpy(tpage.data + apageDataOffset, entry, len);
+
+			memcpy(tpage.data + apageDataOffset, entry, 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE);
 			apage->slot[-i] = apageDataOffset;
-			apageDataOffset += len;
+			apageDataOffset += 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
 		}
 	}
     if (slotNo != NIL)
 	{
 		entry = apage->data + apage->slot[-slotNo];
-		len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
-		memcpy(tpage.data + apageDataOffset, entry, len);
+        
+		memcpy(tpage.data + apageDataOffset, entry, 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE);
 		apage->slot[-slotNo] = apageDataOffset;
-		apageDataOffset += len;
+		apageDataOffset += 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
 	}
     memcpy(apage->data, tpage.data, apageDataOffset);
     // 3) Page header를 갱신함

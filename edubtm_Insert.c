@@ -122,8 +122,7 @@ Four edubtm_Insert(
     *h=FALSE;
     *f=FALSE;
 
-    e = BfM_GetTrain(root, &apage, PAGE_BUF);
-	if(e) ERR(e);
+    BfM_GetTrain(root, &apage, PAGE_BUF);
 
     if (apage->any.hdr.type & INTERNAL) {
         // 1) 파라미터로 주어진 root page가 internal page인 경우
@@ -148,7 +147,7 @@ Four edubtm_Insert(
         // 1-3) 결정된 자식 page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 파라미터로 주어진 root page에 삽입함
         // 1-4) 파라미터로 주어진 root page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
         if (lh) {
-            tKey.len= litem.klen;
+            tKey.len = litem.klen;
             memcpy(tKey.val, litem.kval, tKey.len);
             edubtm_BinarySearchInternal(&(apage->bi), kdesc, &tKey, &idx);
             edubtm_InsertInternal(catObjForFile, &(apage->bi), &litem, idx, h, item);

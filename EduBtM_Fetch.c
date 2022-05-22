@@ -196,10 +196,8 @@ Four edubtm_Fetch(
 			MAKE_PAGEID(child, root->volNo, iEntry->spid);
         }
 				
-        e = edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
-        if(e) ERRB1(e, root, PAGE_BUF);
-        e = BfM_FreeTrain(root, PAGE_BUF);
-        if(e) ERR(e);
+        edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+        BfM_FreeTrain(root, PAGE_BUF);
 	}
 	else if (apage->any.hdr.type & LEAF)
 	{
@@ -277,12 +275,9 @@ Four edubtm_Fetch(
 			else
 				cursor->flag = CURSOR_EOS;
 		}
-
-		e = BfM_FreeTrain(root, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
-		
-        e = BfM_GetTrain(leafPid, &apage, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
+        
+        BfM_FreeTrain(root, PAGE_BUF);
+        BfM_GetTrain(leafPid, &apage, PAGE_BUF);
 
 		if (cursor->flag != CURSOR_EOS)
 		{
@@ -308,8 +303,7 @@ Four edubtm_Fetch(
                 cursor->flag = CURSOR_EOS;
         }	
 
-		e = BfM_FreeTrain(leafPid, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
+		BfM_FreeTrain(leafPid, PAGE_BUF);
 	}
 
     return(eNOERROR);

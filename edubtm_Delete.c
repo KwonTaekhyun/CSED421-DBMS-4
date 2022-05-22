@@ -155,12 +155,12 @@ Four edubtm_Delete(
         //     btm_Underflow() 호출 결과로서 파라미터로 주어진 root page의 내용이 변경되므로, btm_Underflow() 호출 후 root page의 DIRTY bit를 1로 set 해야 함
         if(lf){
             btm_Underflow(&pFid, rpage, &child, idx, f, &lh, &litem, dlPool, dlHead);
+            BfM_SetDirty(root, PAGE_BUF);
             if(lh){
                 memcpy(&tKey, &litem.klen, sizeof(KeyValue));
                 edubtm_BinarySearchInternal(rpage, kdesc, &tKey, &idx);
                 edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
             }
-            BfM_SetDirty(root, PAGE_BUF);
         }
     }
     else if((rpage->any.hdr.type) & LEAF){
@@ -249,14 +249,12 @@ Four edubtm_DeleteLeaf(
     if(found){
         lEntry = &apage->data[apage->slot[-idx]];
         lEntryOffset = apage->slot[-idx];
-        alignedKlen = ALIGNED_LENGTH(lEntry->klen);
-        entryLen = sizeof(Two) * 2 + alignedKlen + OBJECTID_SIZE;
+        entryLen = sizeof(Two) * 2 + ALIGNED_LENGTH(lEntry->klen) + OBJECTID_SIZE;
 
-        oidArray = &lEntry->kval[alignedKlen];
-        memcpy(&tOid, oidArray, OBJECTID_SIZE);
+        memcpy(&tOid, &lEntry->kval[ALIGNED_LENGTH(lEntry->klen)], OBJECTID_SIZE);
 
         if(btm_ObjectIdComp(oid, &tOid) == EQUAL){
-            for(i = idx; i < apage->hdr.nSlots-1; i++){
+            for(i = idx; i < apage->hdr.nSlots - 1; i++){
                 apage->slot[-i] = apage->slot[-(i+1)];
             }
 

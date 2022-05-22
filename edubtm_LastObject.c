@@ -97,8 +97,7 @@ Four edubtm_LastObject(
     // B+ tree 색인에서 마지막 object (가장 큰 key값을 갖는 leaf index entry) 를 검색함
 
     // 1) B+ tree 색인의 마지막 leaf page의 마지막 index entry (slot 번호 = nSlots - 1) 를 가리키는 cursor를 반환함
-    e = BfM_GetTrain(root, &apage, PAGE_BUF);
-	if (e < 0) ERR(e);
+    BfM_GetTrain(root, &apage, PAGE_BUF);
 
     if (apage->any.hdr.type & INTERNAL)
 	{
@@ -114,8 +113,7 @@ Four edubtm_LastObject(
 		}
 		else
 		{
-			lEntry = apage->bl.data + apage->bl.slot[-1*(apage->bl.hdr.nSlots-1)];
-			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+			lEntry = apage->bl.data + apage->bl.slot[-(apage->bl.hdr.nSlots-1)];
 		
 			memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
 
@@ -128,14 +126,12 @@ Four edubtm_LastObject(
                 cursor->flag = CURSOR_ON;
                 cursor->leaf = *root;
                 cursor->slotNo = apage->bl.hdr.nSlots-1;
-
-                memcpy(&cursor->oid, &lEntry->kval + alignedKlen, sizeof(ObjectID));
+                cursor->oid = ((ObjectID *)&lEntry->kval[ALIGNED_LENGTH(cursor->key.len)])[0];
             }
 		}
 	}
 
-	e = BfM_FreeTrain(root, PAGE_BUF);
-	if (e < 0) ERR(e);
+	BfM_FreeTrain(root, PAGE_BUF);
     // 2) 검색 종료 key 값이 마지막 object의 key 값 보다 크거나, key 값은 같으나 검색 종료 연산이 SM_GT인 경우 CURSOR_EOS 반환 
 
     return(eNOERROR);
