@@ -652,33 +652,28 @@ Four edubtm_FreePages(
     if (apage->any.hdr.type & INTERNAL){
         BtreeInternal* curr = &(apage->bi);
         MAKE_PAGEID(tPid, curPid->volNo, curr->hdr.p0);
-        e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
-        if(e) ERRB1(e, curPid, PAGE_BUF);
+        edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
 
         for (i = 0; i < curr->hdr.nSlots; i++) {
             iEntryOffset = apage->bi.slot[-i];
             iEntry = (btm_InternalEntry*)&(curr->data[iEntryOffset]);
 
             MAKE_PAGEID(tPid, curPid->volNo, iEntry->spid);
-            e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
-            if (e) ERRB1(e, curPid, PAGE_BUF);
+            edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
         }
     }
     //2) 파라미터로 주어진 page를 deallocate 함
     //2-1) Page header의 type에서 해당 page가 deallocate 될 page임을 나타내는 bit를 set 및 나머지 bit들을 unset 함
     apage->any.hdr.type = FREEPAGE;
     //2-2) 해당 page를 deallocate 함
-    e = Util_getElementFromPool(dlPool, &dlElem);
-    if(e) ERR(e);
+    Util_getElementFromPool(dlPool, &dlElem);
     dlElem->type = DL_PAGE;
     dlElem->elem.pid = *curPid;
     dlElem->next = dlHead->next;
     dlHead->next = dlElem;
 
-    e = BfM_SetDirty(curPid, PAGE_BUF);
-    if(e) ERRB1(e, curPid, PAGE_BUF);
-    e = BfM_FreeTrain(curPid, PAGE_BUF);
-    if(e) ERR(e);
+    BfM_SetDirty(curPid, PAGE_BUF);
+    BfM_FreeTrain(curPid, PAGE_BUF);
     
     return(eNOERROR);
     
@@ -748,10 +743,8 @@ Four edubtm_Fetch(
 			MAKE_PAGEID(child, root->volNo, iEntry->spid);
         }
 				
-        e = edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
-        if(e) ERRB1(e, root, PAGE_BUF);
-        e = BfM_FreeTrain(root, PAGE_BUF);
-        if(e) ERR(e);
+        edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+        BfM_FreeTrain(root, PAGE_BUF);
 	}
 	else if (apage->any.hdr.type & LEAF)
 	{
@@ -829,12 +822,9 @@ Four edubtm_Fetch(
 			else
 				cursor->flag = CURSOR_EOS;
 		}
-
-		e = BfM_FreeTrain(root, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
-		
-        e = BfM_GetTrain(leafPid, &apage, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
+        
+        BfM_FreeTrain(root, PAGE_BUF);
+        BfM_GetTrain(leafPid, &apage, PAGE_BUF);
 
 		if (cursor->flag != CURSOR_EOS)
 		{
@@ -860,8 +850,7 @@ Four edubtm_Fetch(
                 cursor->flag = CURSOR_EOS;
         }	
 
-		e = BfM_FreeTrain(leafPid, PAGE_BUF);
-		if (e!=eNOERROR) ERR(e);
+		BfM_FreeTrain(leafPid, PAGE_BUF);
 	}
 
     return(eNOERROR);
@@ -898,7 +887,8 @@ Four edubtm_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
-    // B+ tree 색인에서 검색 조건을 만족하는 현재 leaf index entry의 다음 leaf index entry를 검색하고, 검색된 leaf index entry를 가리키는 cursor를 반환함. 검색 조건이 SM_GT, SM_GE, SM_BOF일 경우 key 값이 작아지는 방향으로 backward scan을 하며, 그 외의 경우 key 값이 커지는 방향으로 forward scan을 한다
+    // B+ tree 색인에서 검색 조건을 만족하는 현재 leaf index entry의 다음 leaf index entry를 검색하고, 검색된 leaf index entry를 가리키는 cursor를 반환함. 
+    // 검색 조건이 SM_GT, SM_GE, SM_BOF일 경우 key 값이 작아지는 방향으로 backward scan을 하며, 그 외의 경우 key 값이 커지는 방향으로 forward scan을 한다
 
     // 1) 검색 조건을 만족하는 다음 leaf index entry를 검색함
     // 2) 검색된 leaf index entry를 가리키는 cursor를 반환함
@@ -908,21 +898,18 @@ Four edubtm_FetchNext(
     Two idx = current->slotNo;
 
     if(compOp == SM_EQ) next->flag = CURSOR_EOS;
-    else if(compOp == SM_LT || compOp == SM_LE || compOp == SM_EOF) idx++;
     else if(compOp == SM_GT || compOp == SM_GE || compOp == SM_BOF) idx--; 
+    else if(compOp == SM_LT || compOp == SM_LE || compOp == SM_EOF) idx++;
 
-    e = BfM_GetTrain(&leaf, &apage, PAGE_BUF);
-    if (e<0) ERR(e);
+    BfM_GetTrain(&leaf, &apage, PAGE_BUF);
 
     if(next->flag != CURSOR_EOS) {
         if(idx < 0) {
             if(apage->hdr.prevPage != NIL) {
-                e = BfM_FreeTrain(&leaf, PAGE_BUF);
-                if(e) ERR(e);
+                BfM_FreeTrain(&leaf, PAGE_BUF);
 
                 MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.prevPage);
-                e = BfM_GetTrain(&overflow, &apage, PAGE_BUF);
-                if(e) ERR(e);
+                BfM_GetTrain(&overflow, &apage, PAGE_BUF);
 
                 idx = apage->hdr.nSlots - 1;
             }
@@ -932,12 +919,10 @@ Four edubtm_FetchNext(
         }
         else if(idx >= apage->hdr.nSlots) {
             if(apage->hdr.nextPage != NIL) {
-                e = BfM_FreeTrain(&leaf, PAGE_BUF);
-                if(e) ERR(e);
+                BfM_FreeTrain(&leaf, PAGE_BUF);
 
                 MAKE_PAGEID(overflow, leaf.volNo, apage->hdr.nextPage);
-                e = BfM_GetTrain(&overflow, &apage, PAGE_BUF);
-                if(e) ERR(e);
+                BfM_GetTrain(&overflow, &apage, PAGE_BUF);
 
                 idx = 0;
             }
@@ -946,34 +931,31 @@ Four edubtm_FetchNext(
             }
         }
         else {
-            e = BfM_FreeTrain(&leaf, PAGE_BUF);
-            if(e) ERR(e);
-            e = BfM_GetTrain(&overflow, &apage, PAGE_BUF);
-            if(e) ERR(e);
+            BfM_FreeTrain(&leaf, PAGE_BUF);
+            BfM_GetTrain(&overflow, &apage, PAGE_BUF);
         }
 
-        entry = apage->data + apage->slot[-idx];
-		alignedKlen = ALIGNED_LENGTH(entry->klen);
-
-		memcpy(&next->oid, &entry->kval + alignedKlen, sizeof(ObjectID));
-		memcpy(&next->key, &entry->klen, sizeof(KeyValue));
-
-		next->leaf = overflow;
+        next->leaf = overflow;
 		next->slotNo = idx;
 
-        cmp = edubtm_KeyCompare(kdesc, &next->key, kval);
-		if ((compOp == SM_LT && !(cmp == LESS)) 
-            || (compOp == SM_LE && !(cmp == LESS || cmp == EQUAL)) 
-            ||(compOp == SM_GT && !(cmp == GREATER)) 
-            ||(compOp == SM_GE && !(cmp == GREATER || cmp == EQUAL)))
-			next->flag = CURSOR_EOS;
+        entry = &apage->data[apage->slot[-idx]];
+		alignedKlen = ALIGNED_LENGTH(entry->klen);
 
-        e = BfM_FreeTrain(&overflow, PAGE_BUF);
-        if(e) ERR(e);
+		memcpy(&next->oid, &(entry->kval[alignedKlen]), OBJECTID_SIZE);
+		memcpy(&next->key, &entry->klen, sizeof(KeyValue));
+
+        cmp = edubtm_KeyCompare(kdesc, &next->key, kval);
+		if ((compOp == SM_LE && (cmp != LESS && cmp != EQUAL))
+            || (compOp == SM_LT && (cmp != LESS)) 
+            || (compOp == SM_GE && (cmp != GREATER && cmp != EQUAL))
+            || (compOp == SM_GT && (cmp != GREATER))){
+                next->flag = CURSOR_EOS;
+            }
+
+        BfM_FreeTrain(&overflow, PAGE_BUF);
     }
     else{
-        e = BfM_FreeTrain(&leaf, PAGE_BUF);
-        if(e) ERR(e);
+        BfM_FreeTrain(&leaf, PAGE_BUF);
     }
 
     return(eNOERROR);
@@ -1014,8 +996,7 @@ Four edubtm_FirstObject(
     // B+ tree 색인에서 첫 번째 object (가장 작은 key 값을 갖는 leaf index entry) 를 검색함
 
     // 1) B+ tree 색인의 첫 번째 leaf page의 첫 번째 leaf index entry를 가리키는 cursor를 반환함
-    e = BfM_GetTrain(root, &apage, PAGE_BUF);
-	if (e) ERR(e);
+    BfM_GetTrain(root, &apage, PAGE_BUF);
 
     if (apage->any.hdr.type & INTERNAL)
 	{
@@ -1024,9 +1005,7 @@ Four edubtm_FirstObject(
 	}
 	else if (apage->any.hdr.type & LEAF)
 	{
-        lEntryOffset = apage->bl.slot[0];
-        lEntry = &(apage->bl.data[lEntryOffset]);
-		alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+        lEntry = &(apage->bl.data[apage->bl.slot[0]]);
 		
 		memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
 
@@ -1039,14 +1018,11 @@ Four edubtm_FirstObject(
             cursor->flag = CURSOR_ON;
             cursor->leaf = *root;
             cursor->slotNo = 0;
-
-            alignedKlen = ALIGNED_LENGTH(cursor->key.len);
-            cursor->oid = ((ObjectID *)&lEntry->kval[alignedKlen])[0];
+            cursor->oid = ((ObjectID *)&lEntry->kval[ALIGNED_LENGTH(cursor->key.len)])[0];
         }
 	}
     // 2) 검색 종료 key 값이 첫 번째 object의 key 값 보다 작거나, key 값은 같으나 검색 종료 연산이 SM_LT인 경우 CURSOR_EOS 반환 
-    e = BfM_FreeTrain(root, PAGE_BUF);
-	if (e < 0) ERR(e);
+    BfM_FreeTrain(root, PAGE_BUF);
 
     return(eNOERROR);
     
@@ -1091,8 +1067,7 @@ Four edubtm_LastObject(
     // B+ tree 색인에서 마지막 object (가장 큰 key값을 갖는 leaf index entry) 를 검색함
 
     // 1) B+ tree 색인의 마지막 leaf page의 마지막 index entry (slot 번호 = nSlots - 1) 를 가리키는 cursor를 반환함
-    e = BfM_GetTrain(root, &apage, PAGE_BUF);
-	if (e < 0) ERR(e);
+    BfM_GetTrain(root, &apage, PAGE_BUF);
 
     if (apage->any.hdr.type & INTERNAL)
 	{
@@ -1108,8 +1083,7 @@ Four edubtm_LastObject(
 		}
 		else
 		{
-			lEntry = apage->bl.data + apage->bl.slot[-1*(apage->bl.hdr.nSlots-1)];
-			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+			lEntry = apage->bl.data + apage->bl.slot[-(apage->bl.hdr.nSlots-1)];
 		
 			memcpy(&cursor->key, &lEntry->klen, sizeof(KeyValue));
 
@@ -1122,14 +1096,12 @@ Four edubtm_LastObject(
                 cursor->flag = CURSOR_ON;
                 cursor->leaf = *root;
                 cursor->slotNo = apage->bl.hdr.nSlots-1;
-
-                memcpy(&cursor->oid, &lEntry->kval + alignedKlen, sizeof(ObjectID));
+                cursor->oid = ((ObjectID *)&lEntry->kval[ALIGNED_LENGTH(cursor->key.len)])[0];
             }
 		}
 	}
 
-	e = BfM_FreeTrain(root, PAGE_BUF);
-	if (e < 0) ERR(e);
+	BfM_FreeTrain(root, PAGE_BUF);
     // 2) 검색 종료 key 값이 마지막 object의 key 값 보다 크거나, key 값은 같으나 검색 종료 연산이 SM_GT인 경우 CURSOR_EOS 반환 
 
     return(eNOERROR);
@@ -1401,8 +1373,7 @@ Four edubtm_Insert(
     *h=FALSE;
     *f=FALSE;
 
-    e = BfM_GetTrain(root, &apage, PAGE_BUF);
-	if(e) ERR(e);
+    BfM_GetTrain(root, &apage, PAGE_BUF);
 
     if (apage->any.hdr.type & INTERNAL) {
         // 1) 파라미터로 주어진 root page가 internal page인 경우
@@ -1427,7 +1398,7 @@ Four edubtm_Insert(
         // 1-3) 결정된 자식 page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 파라미터로 주어진 root page에 삽입함
         // 1-4) 파라미터로 주어진 root page에서 split이 발생한 경우, 해당 split으로 생성된 새로운 page를 가리키는 internal index entry를 반환함
         if (lh) {
-            tKey.len= litem.klen;
+            tKey.len = litem.klen;
             memcpy(tKey.val, litem.kval, tKey.len);
             edubtm_BinarySearchInternal(&(apage->bi), kdesc, &tKey, &idx);
             edubtm_InsertInternal(catObjForFile, &(apage->bi), &litem, idx, h, item);
@@ -1724,19 +1695,19 @@ Four edubtm_SplitLeaf(
     // 1) 새로운 page를 할당 받음
     btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
     // 2) 할당 받은 page를 leaf page로 초기화함
-    edubtm_InitLeaf(&newPid, FALSE, isTmp);
+    edubtm_InitLeaf(&newPid, FALSE, FALSE);
     // 3) 기존 index entry들 및 삽입할 index entry를 key 순으로 정렬하여 overflow가 발생한 page 및 할당 받은 page에 나누어 저장함
     BfM_GetNewTrain(&newPid, (char**)&npage, PAGE_BUF);
     // 먼저, overflow가 발생한 page에 데이터 영역을 50% 이상 채우는 수의 index entry들을 저장하고 header 갱신
     // 나머지 index entry들을 할당 받은 page에 저장하고 header 갱신
     sum = 0;
     maxLoop = fpage->hdr.nSlots + 1;
-    j = 0;
     flag = FALSE;
-    for(i = 0; i < maxLoop && sum < BL_HALF; i++){
+    for(i = 0, j = 0; i < maxLoop && sum < BL_HALF; i++){
         if(i == high + 1){
-            flag = TRUE;
             entryLen = (sizeof(Two) * 2 + ALIGNED_LENGTH(item->klen) + OBJECTID_SIZE); 
+
+            flag = TRUE;
         }
         else{
             fEntryOffset = fpage->slot[-j];
@@ -1749,23 +1720,19 @@ Four edubtm_SplitLeaf(
     }
     fpage->hdr.nSlots = j;
 
-    k = 0;
-    nEntryOffset = 0;
-    alignedKlen = ALIGNED_LENGTH(item->klen);
-    itemEntryLen = (sizeof(Two) * 2 + alignedKlen + OBJECTID_SIZE); 
-    for(; i < maxLoop; i++){
+    for(k = 0; i < maxLoop; i++){
         nEntryOffset = npage->hdr.free;
         npage->slot[-k] = nEntryOffset; 
         nEntry = &npage->data[nEntryOffset];
 
-        if(i == high + 1){
-            itemEntry = nEntry;
-            itemEntry->nObjects = item->nObjects;
-            itemEntry->klen = item->klen;
-            memcpy(itemEntry->kval, item->kval, item->klen);
-            iOidArray = &itemEntry->kval[alignedKlen];
-            *iOidArray = item->oid;
-            entryLen = itemEntryLen;
+        if(!flag && (i == high + 1)){
+            nEntry->nObjects = item->nObjects;
+            nEntry->klen = item->klen;
+
+            memcpy(nEntry->kval, item->kval, item->klen);
+            memcpy(&nEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
+
+            entryLen = (sizeof(Two) * 2 + ALIGNED_LENGTH(item->klen) + OBJECTID_SIZE);
         }
         else{
             fEntryOffset = fpage->slot[-j];
@@ -1780,37 +1747,33 @@ Four edubtm_SplitLeaf(
             else{
                 fpage->hdr.unused += entryLen;  
             }
+
             j++;
         }
+
         npage->hdr.free += entryLen;
         k++;
     }
     npage->hdr.nSlots = k;
-    
+
     if(flag == TRUE){
         for(i = fpage->hdr.nSlots - 1; i > high; i--){
             fpage->slot[-(i+1)] = fpage->slot[-i];
         }
         fpage->slot[-(high+1)] = fpage->hdr.free;
 
-        fEntryOffset = fpage->hdr.free;
-        fEntry = &fpage->data[fEntryOffset];
-        itemEntry = fEntry;
+        fEntry = &fpage->data[fpage->hdr.free];
+        fEntry->nObjects = item->nObjects;
+        fEntry->klen = item->klen;
 
-        itemEntry->nObjects = item->nObjects;
-        itemEntry->klen = item->klen;
-        memcpy(itemEntry->kval, item->kval, item->klen);
-        iOidArray = &itemEntry->kval[alignedKlen];
-        *iOidArray = item->oid;
+        memcpy(fEntry->kval, item->kval, item->klen);
+        memcpy(&fEntry->kval[ALIGNED_LENGTH(item->klen)], &item->oid, OBJECTID_SIZE);
 
-        fpage->hdr.free += itemEntryLen;
+        fpage->hdr.free += (sizeof(Two) * 2 + ALIGNED_LENGTH(item->klen) + OBJECTID_SIZE);
         fpage->hdr.nSlots ++;
     }
     
     // 4) 할당 받은 page를 leaf page들간의 doubly linked list에 추가함
-    // 5) 할당 받은 page를 가리키는 internal index entry를 생성함
-    // 6) Split된 page가 ROOT일 경우, type을 LEAF로 변경함
-    // 7) 생성된 index entry를 반환함
     npage->hdr.prevPage = root->pageNo;
     npage->hdr.nextPage = fpage->hdr.nextPage;
     fpage->hdr.prevPage;
@@ -1826,15 +1789,17 @@ Four edubtm_SplitLeaf(
         BfM_FreeTrain(&nextPid, PAGE_BUF);
     }
 
-    if(fpage->hdr.type & ROOT){
-        fpage->hdr.type = LEAF;
-    }
-
+    // 5) 할당 받은 page를 가리키는 internal index entry를 생성함
     nEntry = &npage->data[npage->slot[0]];
     ritem->spid = newPid.pageNo;
     ritem->klen = nEntry->klen;
     memcpy(ritem->kval, nEntry->kval, nEntry->klen);
 
+    // 6) Split된 page가 ROOT일 경우, type을 LEAF로 변경함
+    if(fpage->hdr.type & ROOT){
+        fpage->hdr.type = LEAF;
+    }
+    // 7) 생성된 index entry를 반환함
     BfM_SetDirty(&newPid, PAGE_BUF);
     BfM_FreeTrain(&newPid, PAGE_BUF);
 
@@ -1887,35 +1852,37 @@ Four edubtm_SplitInternal(
     // 3-5) 각 page의 header를 갱신함
     sum = 0;
     maxLoop = fpage->hdr.nSlots + 1;
-    j = 0;
     flag = FALSE;
-    for(i = 0; i < maxLoop && sum < BI_HALF; i++){
+    for(i = 0, j = 0; i < maxLoop && sum < BI_HALF; i++){
         if(i == high + 1){
-            flag = TRUE;
             entryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen); 
+            flag = TRUE;
         }
         else{
             fEntryOffset = fpage->slot[-j];
             fEntry = &fpage->data[fEntryOffset];
-            entryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen); 
+            entryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(fEntry->klen); 
             j++;
         }
         sum += entryLen + sizeof(Two);
     }
+    fpage->hdr.nSlots = j;
 
-    k = -1;
-    nEntryOffset = 0;
-    itemEntryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen); 
-    for(; i < maxLoop; i++){
-        if(i == high + 1){
+    for(k = -1; i < maxLoop; i++){
+        nEntryOffset = npage->hdr.free;
+        if(k != -1){
+            npage->slot[-k] = nEntryOffset; 
+        }
+        nEntry = &npage->data[nEntryOffset];
+
+        if(!flag && (i == high + 1)){
             if(k == -1){
-                memcpy(ritem, item, itemEntryLen);
+                memcpy(ritem, item, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen));
             }
             else{
-                itemEntry = nEntry;
-                memcpy(itemEntry, item, itemEntryLen);
+                memcpy(nEntry, item, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen));
             }
-            entryLen = itemEntryLen;
+            entryLen = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen);
         }
         else{
             fEntryOffset = fpage->slot[-j];
@@ -1929,17 +1896,18 @@ Four edubtm_SplitInternal(
                 memcpy(nEntry, fEntry, entryLen);
             }
 
-            if(fEntryOffset + entryLen == fpage->hdr.free)
+            if(fEntryOffset + entryLen == fpage->hdr.free){
                 fpage->hdr.free -= entryLen;
-            else
+            }
+            else{
                 fpage->hdr.unused += entryLen;
+            }
 
             j++;
         }
 
         if(k == -1){
             npage->hdr.p0 = ritem->spid;
-            ritem->spid = newPid.pageNo;
         }
         else{
             npage->hdr.free += entryLen;
@@ -1954,16 +1922,13 @@ Four edubtm_SplitInternal(
         }
         fpage->slot[-(high+1)] = fpage->hdr.free;
 
-        fEntryOffset = fpage->hdr.free;
-        fEntry = &fpage->data[fEntryOffset];
-        itemEntry = fEntry;
+        fEntry = &fpage->data[fpage->hdr.free];
 
-        memcpy(itemEntry, item, itemEntryLen);
+        memcpy(fEntry, item, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen));
 
-        fpage->hdr.free += itemEntryLen;
+        fpage->hdr.free += sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(item->klen);
         fpage->hdr.nSlots++;
     }
-    fpage->hdr.nSlots = j;
 
     // 4) Split된 page가 ROOT일 경우, type을 INTERNAL로 변경함
     if(fpage->hdr.type & ROOT){
@@ -2003,19 +1968,19 @@ void edubtm_CompactLeafPage(
 		if (i != slotNo)
 		{
 			entry = apage->data + apage->slot[-i];
-			len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
-			memcpy(tpage.data + apageDataOffset, entry, len);
+
+			memcpy(tpage.data + apageDataOffset, entry, 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE);
 			apage->slot[-i] = apageDataOffset;
-			apageDataOffset += len;
+			apageDataOffset += 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
 		}
 	}
     if (slotNo != NIL)
 	{
 		entry = apage->data + apage->slot[-slotNo];
-		len = 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
-		memcpy(tpage.data + apageDataOffset, entry, len);
+        
+		memcpy(tpage.data + apageDataOffset, entry, 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE);
 		apage->slot[-slotNo] = apageDataOffset;
-		apageDataOffset += len;
+		apageDataOffset += 2 * sizeof(Two) + ALIGNED_LENGTH(entry->klen) + OBJECTID_SIZE;
 	}
     memcpy(apage->data, tpage.data, apageDataOffset);
     // 3) Page header를 갱신함
@@ -2048,20 +2013,18 @@ void edubtm_CompactInternalPage(
 
         if(i != slotNo){
             entry = apage->data + apage->slot[-i];
-            len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
             
-            memcpy(tpage.data + apageDataOffset, entry, len);
+            memcpy(tpage.data + apageDataOffset, entry, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen));
             apage->slot[-i] = apageDataOffset;
-            apageDataOffset += len;
+            apageDataOffset += sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
         }
     }
     if(slotNo != NIL){
         entry = apage->data + apage->slot[-slotNo];
-        len = sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
 
-        memcpy(tpage.data + apageDataOffset, entry, len);
+        memcpy(tpage.data + apageDataOffset, entry, sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen));
         apage->slot[-slotNo] = apageDataOffset;
-        apageDataOffset += len;
+        apageDataOffset += sizeof(ShortPageID) + sizeof(Two) + ALIGNED_LENGTH(entry->klen);
     }
     memcpy(apage->data, tpage.data, apageDataOffset);
     // 3) Page header를 갱신함
@@ -2138,12 +2101,12 @@ Four edubtm_Delete(
         //     btm_Underflow() 호출 결과로서 파라미터로 주어진 root page의 내용이 변경되므로, btm_Underflow() 호출 후 root page의 DIRTY bit를 1로 set 해야 함
         if(lf){
             btm_Underflow(&pFid, rpage, &child, idx, f, &lh, &litem, dlPool, dlHead);
+            BfM_SetDirty(root, PAGE_BUF);
             if(lh){
                 memcpy(&tKey, &litem.klen, sizeof(KeyValue));
                 edubtm_BinarySearchInternal(rpage, kdesc, &tKey, &idx);
                 edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
             }
-            BfM_SetDirty(root, PAGE_BUF);
         }
     }
     else if((rpage->any.hdr.type) & LEAF){
@@ -2211,14 +2174,12 @@ Four edubtm_DeleteLeaf(
     if(found){
         lEntry = &apage->data[apage->slot[-idx]];
         lEntryOffset = apage->slot[-idx];
-        alignedKlen = ALIGNED_LENGTH(lEntry->klen);
-        entryLen = sizeof(Two) * 2 + alignedKlen + OBJECTID_SIZE;
+        entryLen = sizeof(Two) * 2 + ALIGNED_LENGTH(lEntry->klen) + OBJECTID_SIZE;
 
-        oidArray = &lEntry->kval[alignedKlen];
-        memcpy(&tOid, oidArray, OBJECTID_SIZE);
+        memcpy(&tOid, &lEntry->kval[ALIGNED_LENGTH(lEntry->klen)], OBJECTID_SIZE);
 
         if(btm_ObjectIdComp(oid, &tOid) == EQUAL){
-            for(i = idx; i < apage->hdr.nSlots-1; i++){
+            for(i = idx; i < apage->hdr.nSlots - 1; i++){
                 apage->slot[-i] = apage->slot[-(i+1)];
             }
 
